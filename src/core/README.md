@@ -5,9 +5,14 @@ emits an ordered list of `CryptoEvent`s. The UI only renders those events.
 
 ## What belongs here
 
-- `sim/` — the playback kernel and seeded rng, vendored from Internet Visualizer.
-- `events/` — the `CryptoEvent` union and the run builder.
-- `citations/` — the citation registry.
+- `sim/` — the playback kernel and seeded rng, vendored from Internet Visualizer (see
+  `VENDORED.md`: `playback.ts` and `rng.ts` are byte-identical and not edited; `result.ts`
+  is adapted).
+- `events/` — the `CryptoEvent` union (`types.ts`, frozen after phase 02) and `createRun`,
+  which gives step `n` the virtual time `n * STEP_MS` and turns `group(...)` calls into
+  phases.
+- `citations/` — the citation registry. Each algorithm's own citations live in
+  `<algo>/citations.ts`; `general.ts` holds shared ones (UTF-8, hex, base64url).
 - `bytes/` — hex, UTF-8, base64url and bit helpers on `Uint8Array`.
 - `state/` — the URL share-state codec (Zod).
 - `scenarios.ts` — the scenario catalogue the determinism and citation tests run.

@@ -13,3 +13,8 @@ test-results
 # would fail `format:check` in CI whenever someone edits documentation. Keep it out.
 *.md
 docs/
+
+# Vendored byte-for-byte (VENDORED.md); tests/vendored.test.ts fails if they change.
+src/core/sim/playback.ts
+src/core/sim/rng.ts
+src/core/sim/__tests__/
