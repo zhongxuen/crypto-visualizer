@@ -8,7 +8,7 @@ Five new projects, each planned in its own file:
 | # | Plan | Fills | Size | Suggested order |
 |---|---|---|---|---|
 | 1 | [forensics-game-plan.md](forensics-game-plan.md) | Autopsy, Volatility, FTK Imager are listed as skills but no project uses them | L | 1st |
-| 2 | [crypto-visualizer-plan.md](crypto-visualizer-plan.md) | Internet Visualizer's "no cryptography in the TLS layer" disclaimer | M | 2nd |
+| 2 | [implementation/00-overview.md](implementation/00-overview.md) (split from `crypto-visualizer-plan.md`) | Internet Visualizer's "no cryptography in the TLS layer" disclaimer | M | 2nd |
 | 3 | [os-visualizer-plan.md](os-visualizer-plan.md) | Operating Systems course | M | 3rd |
 | 4 | [compiler-visualizer-plan.md](compiler-visualizer-plan.md) | AI Code Visualizer's "does not execute your code" disclaimer | L | 4th |
 | 5 | [database-internals-visualizer-plan.md](database-internals-visualizer-plan.md) | Databases course | L | 5th |
