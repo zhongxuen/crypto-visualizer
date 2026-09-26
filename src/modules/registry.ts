@@ -54,7 +54,7 @@ export const MODULES: readonly ModuleEntry[] = [
     blurb:
       'Why an unsalted hash falls to a precomputed table, what a salt changes, and PBKDF2 iterations stepped for real.',
     number: 3,
-    status: 'planned',
+    status: 'ready',
     phase: 1,
   },
   {

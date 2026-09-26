@@ -1,0 +1,73 @@
+import { Chapter } from '@/components/lesson';
+
+<Chapter id="lookup">
+
+## Unsalted hashes leak
+
+A server should never store your password. The classic advice is to store its **hash**
+instead: at login, hash what was typed and compare. Hashing is one-way, so a stolen
+database of hashes doesn't directly reveal anyone's password.
+
+But look at alice and carol. They chose the same password, so they have the **same hash**,
+and anyone reading the table can see it without cracking anything.
+
+Worse, people choose the same few passwords. An attacker can hash the 200 most common ones
+**once, in advance**, and then look any stolen hash up instantly. Step through the lookups:
+four of the five users fall immediately. (This is a precomputed lookup table. A real
+_rainbow table_ stores chains of hashes instead, trading lookup time for far less space,
+but it answers the same question.)
+
+</Chapter>
+
+<Chapter id="salt">
+
+## Salts defeat precomputation
+
+The fix is a **salt**: a random value, different for every user, stored next to the hash.
+The server stores `salt ‖ SHA-256(salt ‖ password)` and at login repeats the same sum.
+
+The salt is not secret. Its only job is to make every user's input different. Now alice
+and carol have different hashes, and the attacker's table, built without these salts,
+matches nothing. To use a table, they would have to build a new one for every single salt,
+which is no faster than simply guessing.
+
+But notice what salts don't stop: an attacker going after **one** user can still try
+guesses against that user's salt, and SHA-256 is fast, billions of guesses a second on one
+graphics card. That's the next problem.
+
+</Chapter>
+
+<Chapter id="pbkdf2">
+
+## Slow hashing with PBKDF2
+
+If the attacker can make billions of guesses a second, make each guess **expensive**.
+PBKDF2 does it by repeating HMAC many times: `U1 = HMAC(password, salt ‖ block number)`,
+then `U2 = HMAC(password, U1)`, and so on, XORing every `U` into the result.
+
+The count is the defence. OWASP recommends **600,000** iterations for PBKDF2-HMAC-SHA-256.
+The server pays that once per login, a fraction of a second. An attacker pays it for every
+single guess.
+
+Step through the first three iterations, then run all 600,000 for real. It runs in a
+background thread, so the page stays responsive, and you can cancel it.
+
+</Chapter>
+
+<Chapter id="cost">
+
+## What each guess costs
+
+These bars estimate how long one attacker needs to try every password in a set, for each
+way of storing them. Move the slider to add graphics cards and see what changes.
+
+**bcrypt** (1999) is built on the Blowfish cipher's slow key setup, repeated `2^cost`
+times; each step up in cost doubles the work. **Argon2id** (RFC 9106, 2021) adds
+**memory**: every guess needs a large block of RAM, filled and read in an order that
+depends on the password. Graphics cards have thousands of cores but little memory per core,
+so memory-hardness takes away most of their advantage.
+
+bcrypt and Argon2 are described here, not computed. The speeds are illustrative orders of
+magnitude from one public benchmark, and each shows its source.
+
+</Chapter>

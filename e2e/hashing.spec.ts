@@ -7,6 +7,16 @@ async function open(page: Page, url = '/hashing') {
   await expect(page).toHaveURL(/\?s=/);
 }
 
+/** Wait until the share link carries `step` (it's written after a short debounce). */
+async function linkHasStep(page: Page, step: number) {
+  await page.waitForFunction((want) => {
+    const s = new URL(location.href).searchParams.get('s');
+    if (!s) return false;
+    const state = JSON.parse(atob(s.replace(/-/g, '+').replace(/_/g, '/')));
+    return state.step === want;
+  }, step);
+}
+
 test.describe('/hashing', () => {
   test('the walkthrough completes by keyboard alone, with the right values', async ({
     page,
@@ -72,7 +82,7 @@ test.describe('/hashing', () => {
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('status')).toContainText('Step 3 of 7');
-    await page.waitForTimeout(500);
+    await linkHasStep(page, 2);
     const other = await page.context().newPage();
     await open(other, page.url());
     await expect(other.getByRole('status')).toContainText('Step 3 of 7');
