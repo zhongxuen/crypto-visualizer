@@ -122,6 +122,24 @@ describe('src/core crypto ban (rule 2)', () => {
   });
 });
 
+describe('src/core platform encoding ban (rule 2)', () => {
+  it.each([
+    ['TextEncoder', 'export const b = new TextEncoder().encode("a");'],
+    ['TextDecoder', 'export const s = new TextDecoder().decode(new Uint8Array(1));'],
+    ['Buffer', 'export const h = Buffer.from([1]).toString("hex");'],
+    ['atob', 'export const s = atob("QQ==");'],
+    ['btoa', 'export const s = btoa("A");'],
+  ])('rejects %s', async (_name, code) => {
+    expect(await ruleIdsFor(code, CORE_FILE)).toContain('no-restricted-globals');
+  });
+
+  it('allows them in a core test file, where they are oracles', async () => {
+    const code =
+      'export const b = new TextEncoder().encode(Buffer.from("a").toString());';
+    expect(await ruleIdsFor(code, CORE_TEST_FILE)).toEqual([]);
+  });
+});
+
 describe('src/core determinism (rule 3)', () => {
   it.each([
     ['Math.random()', 'export const r = Math.random();', 'no-restricted-properties'],

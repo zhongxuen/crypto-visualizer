@@ -14,6 +14,8 @@ import boundaries from 'eslint-plugin-boundaries';
  *      -> Aim 2, "be provably correct": core is checked against node:crypto in
  *         tests/differential/. If core could quietly call the real thing, that check
  *         would be comparing node:crypto with itself and prove nothing.
+ *      The same goes for byte encodings: no TextEncoder, TextDecoder, Buffer, atob or
+ *      btoa. src/core/bytes implements UTF-8, hex and base64url, checked against those.
  *   3. src/core/** may not call `Math.random`, `Date.now`, `performance.now` or `Date()`.
  *      -> Aim 3, "be deterministic": same input + same seed = the same run. Randomness
  *         comes from the seeded RNG in src/core/sim, and time from the virtual timeline.
@@ -42,6 +44,9 @@ const FRAMEWORK_MESSAGE =
 
 const CRYPTO_MESSAGE =
   'src/core must implement the algorithm itself: no crypto / node:crypto / Web Crypto and no crypto library. The differential tests compare core against node:crypto, so core calling it would make them prove nothing. Comparisons belong in tests/differential/.';
+
+const ENCODING_MESSAGE =
+  'src/core implements its own byte encodings (src/core/bytes): no TextEncoder, TextDecoder, Buffer, atob or btoa. Tests use them as oracles to check core against.';
 
 const DETERMINISM_MESSAGE =
   'src/core must be deterministic: same input + same seed = the same run. Use the seeded RNG from src/core/sim and the virtual timeline instead of real randomness or the wall clock.';
@@ -112,8 +117,17 @@ const eslintConfig = defineConfig([
         },
       ],
 
-      // Rule 2: the bare global, e.g. `crypto.getRandomValues(...)`, `crypto.subtle`.
-      'no-restricted-globals': ['error', { name: 'crypto', message: CRYPTO_MESSAGE }],
+      'no-restricted-globals': [
+        'error',
+        // Rule 2: the bare global, e.g. `crypto.getRandomValues(...)`, `crypto.subtle`.
+        { name: 'crypto', message: CRYPTO_MESSAGE },
+        // Rule 2, same reasoning one level down: module 1 teaches UTF-8 and base64url, so
+        // src/core/bytes implements them and tests compare against the platform versions.
+        ...['TextEncoder', 'TextDecoder', 'Buffer', 'atob', 'btoa'].map((name) => ({
+          name,
+          message: ENCODING_MESSAGE,
+        })),
+      ],
 
       'no-restricted-properties': [
         'error',

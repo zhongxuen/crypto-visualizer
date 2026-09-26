@@ -13,8 +13,12 @@ emits an ordered list of `CryptoEvent`s. The UI only renders those events.
   phases.
 - `citations/` — the citation registry. Each algorithm's own citations live in
   `<algo>/citations.ts`; `general.ts` holds shared ones (UTF-8, hex, base64url).
-- `bytes/` — hex, UTF-8, base64url and bit helpers on `Uint8Array`.
-- `state/` — the URL share-state codec (Zod).
+- `bytes/` — hex, UTF-8, base64url and bit helpers on `Uint8Array`, implemented by hand
+  and tested against `TextEncoder`/`TextDecoder`/`Buffer`.
+- `state/` — the URL share-state codec: `?s=<base64url(JSON)>`, one Zod branch per
+  module (`defineShareState` in `<algo>/state.ts`, registered in `state/index.ts`), a
+  2 KB limit, a fallback to the module default that never throws, and no free-text
+  passwords.
 - `scenarios.ts` — the scenario catalogue the determinism and citation tests run.
 - `<algo>/` (xor, sha256, hmac, kdf, aes, rsa, dh) — one folder per algorithm: its
   implementation, its `events.ts` and its `citations.ts`.
@@ -29,6 +33,8 @@ Enforced by `eslint.config.mjs` and proved by `tests/boundaries.test.ts`. Core t
 - **No crypto of any kind:** no `crypto` / `node:crypto`, no crypto package, no
   `globalThis.crypto` / `window.crypto` / `crypto.subtle`. The differential tests compare
   core against `node:crypto`, so core calling it would make them prove nothing.
+- No `TextEncoder`, `TextDecoder`, `Buffer`, `atob` or `btoa`. Encodings are implemented in
+  `bytes/`, and tests use the platform versions as oracles.
 - No `Math.random`, `Date.now`, `performance.now`, `new Date()` or `Date()`. Use the seeded
   rng from `sim/rng.ts` and the virtual timeline.
 

@@ -50,7 +50,9 @@ Dependencies point inward: app → modules → components → core.
 2. **No crypto library in core.** `src/core/**` may not import `crypto` / `node:crypto` or
    any crypto package, nor reach Web Crypto via `crypto`, `globalThis.crypto`,
    `window.crypto` or `crypto.subtle`. Core implements the maths itself; if it called the
-   real thing, the differential tests would compare `node:crypto` with itself.
+   real thing, the differential tests would compare `node:crypto` with itself. For the
+   same reason core doesn't use `TextEncoder`/`TextDecoder`/`Buffer`/`atob`/`btoa`: byte
+   encodings are implemented in `src/core/bytes`.
 3. `src/core/**` may not call `Math.random`, `Date.now`, `performance.now`, `new Date()` or
    `Date()`. Randomness comes from the seeded rng in `src/core/sim/rng.ts`, time from the
    virtual timeline.
@@ -67,7 +69,11 @@ Other fixed rules:
   (`VENDORED.md`). Don't edit them.
 - Every `CryptoEvent` cites a `Citation` that resolves in the registry
   (`tests/citations.test.ts`). Every scenario is deterministic (`tests/determinism.test.ts`).
-- Typed free-text passwords are **never** put in a URL or in `localStorage`.
+- Typed free-text passwords are **never** put in a URL or in `localStorage`. Share-state
+  refuses password-like keys (`findSecretKeys` in `src/core/state/schema.ts`); share a
+  built-in example's id instead.
+- Each run step gets `STEP_MS` of virtual time (`createRun` in `src/core/events`), and
+  `group(...)` calls become the phases the stepper moves between.
 - The mulberry32 rng is not cryptographic. Keys are for display only, and the UI says so.
 
 ## Rules for parallel agents (00-overview §4)
