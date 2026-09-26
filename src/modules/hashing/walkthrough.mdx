@@ -1,0 +1,55 @@
+import { Chapter } from '@/components/lesson';
+
+<Chapter id="sha256">
+
+## SHA-256, one step at a time
+
+A hash function turns any amount of data into a fixed-size fingerprint: 32 bytes for
+SHA-256. The same input always gives the same digest, and there is no known way to run it
+backwards or to find two inputs with the same digest.
+
+It works in four stages. **Padding** makes the message a whole number of 64-byte blocks
+and writes its length at the end. Each block is split into sixteen 32-bit words, and the
+**message schedule** stretches them to 64, mixing bits from across the block into every
+word. Then **64 rounds** stir eight working variables, `a` to `h`, using one schedule word
+and one constant per round. Finally the result is **added** back into the running hash.
+
+Step through the padding and the schedule for `"abc"`, watch a few rounds, then skip to
+the digest. It matches what every SHA-256 library prints for `"abc"`: the tests check.
+
+</Chapter>
+
+<Chapter id="avalanche">
+
+## The avalanche effect
+
+Change one bit of the input and about **half** of the 256 output bits change, with no
+pattern to which ones. That property is called the avalanche effect, and it is why a
+digest tells you nothing about how close two inputs were.
+
+Here one bit of `"hello"` is flipped, turning `h` into `i`. The two digests look
+unrelated. In the strip at the end, each filled square is an output bit that flipped. It
+won't be exactly 128: like tossing 256 coins, it lands near half, give or take a dozen.
+
+In Free play, type your own message and pick any bit to flip.
+
+</Chapter>
+
+<Chapter id="hmac">
+
+## From a hash to a MAC
+
+A **MAC** (message authentication code) proves a message came from someone who knows a
+secret key and wasn't changed on the way. The obvious idea is `SHA-256(key ‖ message)`.
+It is broken: SHA-256's digest is its entire internal state, so anyone holding the tag
+can carry on hashing and produce a valid tag for a longer message. That is a
+**length-extension attack**.
+
+**HMAC** fixes it with two nested hashes. The key is padded to one block and XORed with
+`0x36` for an **inner** hash of the message, then with `0x5c` for an **outer** hash of
+that result. Extending the tag now only extends the outer hash's short, fixed input, and
+the attacker can't compute a new inner hash without the key.
+
+The inner and outer hashes are each one step here; expand them to see the SHA-256 blocks.
+
+</Chapter>

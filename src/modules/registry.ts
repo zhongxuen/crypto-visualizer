@@ -44,7 +44,7 @@ export const MODULES: readonly ModuleEntry[] = [
     blurb:
       'SHA-256 through padding, the message schedule and 64 compression rounds. The avalanche effect, length extension, and how HMAC fixes it.',
     number: 2,
-    status: 'planned',
+    status: 'ready',
     phase: 1,
   },
   {
