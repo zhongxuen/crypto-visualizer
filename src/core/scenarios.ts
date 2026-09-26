@@ -12,6 +12,7 @@
 
 import type { CryptoEvent } from './events/types';
 import { HMAC_SCENARIOS } from './hmac/scenarios';
+import { KDF_SCENARIOS } from './kdf/scenarios';
 import { SHA256_SCENARIOS } from './sha256/scenarios';
 import type { SimResult } from './sim/result';
 import { XOR_SCENARIOS } from './xor/scenarios';
@@ -27,4 +28,5 @@ export const SCENARIOS: readonly Scenario[] = [
   ...XOR_SCENARIOS,
   ...SHA256_SCENARIOS,
   ...HMAC_SCENARIOS,
+  ...KDF_SCENARIOS,
 ];

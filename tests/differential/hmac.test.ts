@@ -107,7 +107,10 @@ describe('stepped path', () => {
   const message = utf8Encode('what do ya want for nothing?');
   const events = hmacRun(key, message).events;
   const find = <K extends HmacEvent['kind']>(kind: K, id: string) =>
-    events.find((e) => e.kind === kind && e.id === id) as unknown as Extract<HmacEvent, { kind: K }>;
+    events.find((e) => e.kind === kind && e.id === id) as unknown as Extract<
+      HmacEvent,
+      { kind: K }
+    >;
 
   it('ends with the same tag as the fast path and node:crypto', () => {
     const tag = find('hmac.tag', 'hmac.tag');
