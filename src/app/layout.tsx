@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { SITE } from '@/lib/site';
+
 import './globals.css';
 
 const geistSans = Geist({
@@ -13,9 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Crypto Visualizer',
-  description:
-    'The actual maths behind the padlock icon, one step at a time: XOR, SHA-256, HMAC, PBKDF2, AES, RSA and Diffie-Hellman.',
+  title: SITE.name,
+  description: SITE.description,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
