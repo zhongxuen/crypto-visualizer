@@ -8,10 +8,14 @@
  * round-trip through a link.
  */
 
+import { HASHING_SHARE_STATE } from '../sha256/state';
 import { XOR_SHARE_STATE } from '../xor/state';
 import type { ModuleShareState } from './schema';
 
-export const SHARE_STATES: readonly ModuleShareState[] = [XOR_SHARE_STATE];
+export const SHARE_STATES: readonly ModuleShareState[] = [
+  XOR_SHARE_STATE,
+  HASHING_SHARE_STATE,
+];
 
 export {
   defineShareState,

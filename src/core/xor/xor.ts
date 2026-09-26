@@ -18,7 +18,6 @@ export function xor(a: ArrayLike<number>, b: ArrayLike<number>): number[] {
 /** Bytes as text if they are valid UTF-8 without control characters, else undefined. */
 export function asText(bytes: readonly number[]): string | undefined {
   const text = utf8Decode(Uint8Array.from(bytes));
-  // eslint-disable-next-line no-control-regex
   return /[�\u0000-\u0008\u000b-\u001f\u007f]/.test(text) ? undefined : text;
 }
 
