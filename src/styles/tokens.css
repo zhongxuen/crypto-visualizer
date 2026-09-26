@@ -1,0 +1,91 @@
+/*
+ * Design tokens: colour, type and spacing, as CSS variables.
+ *
+ * Light is the default. Dark applies when the viewer's system asks for it, unless the
+ * manual toggle has set `data-theme` on <html> (ThemeToggle writes it), which wins in
+ * either direction. `globals.css` maps these onto Tailwind v4 `@theme` names, so
+ * components use `bg-surface`, `text-fg-muted`, `border-border` and so on.
+ *
+ * ## The diff palette is colour-blind safe
+ *
+ * A flipped bit is never shown by colour alone. `--diff-on` (orange) and `--diff-off`
+ * (blue) are a pair that stays distinct under deuteranopia and protanopia, and every
+ * component that uses them also changes shape: a flipped bit is a filled square, an
+ * unchanged one a hollow outline, and a changed byte gets a hatched background
+ * (`.pattern-changed` in globals.css). Remove the colour and the picture still reads.
+ */
+
+:root {
+  --bg: #fbfbfa;
+  --surface: #ffffff;
+  --surface-overlay: #f2f2ef;
+  --fg: #16181d;
+  --fg-secondary: #3b3f48;
+  --fg-muted: #5a606b;
+  --border: #dedcd6;
+  --border-strong: #a9a69d;
+  --accent: #1f5fbf;
+  --accent-fg: #ffffff;
+  --focus: #1f5fbf;
+  --ok: #1d7a46;
+  --warn: #8a5a00;
+  --danger: #b3261e;
+  --highlight: #fff1b8;
+  --diff-on: #c2410c;
+  --diff-on-fg: #ffffff;
+  --diff-off: #2563a8;
+
+  --radius: 0.5rem;
+  --target: 2.75rem;
+  --target-floor: 1.5rem;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0f1115;
+    --surface: #161a20;
+    --surface-overlay: #1f242c;
+    --fg: #eceef2;
+    --fg-secondary: #c4c8d0;
+    --fg-muted: #9aa1ad;
+    --border: #2d333d;
+    --border-strong: #515a68;
+    --accent: #7fb0ff;
+    --accent-fg: #0b1220;
+    --focus: #9cc2ff;
+    --ok: #5fd08f;
+    --warn: #f2c14e;
+    --danger: #ff8a80;
+    --highlight: #4a3f10;
+    --diff-on: #fb923c;
+    --diff-on-fg: #1a0d02;
+    --diff-off: #7fb0ff;
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #0f1115;
+  --surface: #161a20;
+  --surface-overlay: #1f242c;
+  --fg: #eceef2;
+  --fg-secondary: #c4c8d0;
+  --fg-muted: #9aa1ad;
+  --border: #2d333d;
+  --border-strong: #515a68;
+  --accent: #7fb0ff;
+  --accent-fg: #0b1220;
+  --focus: #9cc2ff;
+  --ok: #5fd08f;
+  --warn: #f2c14e;
+  --danger: #ff8a80;
+  --highlight: #4a3f10;
+  --diff-on: #fb923c;
+  --diff-on-fg: #1a0d02;
+  --diff-off: #7fb0ff;
+
+  color-scheme: dark;
+}

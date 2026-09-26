@@ -1,26 +1,111 @@
 @import 'tailwindcss';
+@import '../styles/tokens.css';
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Manual theme toggle: `dark:` utilities follow `data-theme` first, then the system. */
+@custom-variant dark {
+  &:where([data-theme='dark'], [data-theme='dark'] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme='light']), :root:not([data-theme='light']) *) {
+      @slot;
+    }
+  }
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-fg: var(--fg);
+  --color-fg-secondary: var(--fg-secondary);
+  --color-fg-muted: var(--fg-muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-focus: var(--focus);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-highlight: var(--highlight);
+  --color-diff-on: var(--diff-on);
+  --color-diff-on-fg: var(--diff-on-fg);
+  --color-diff-off: var(--diff-off);
+  --radius-token: var(--radius);
+  --spacing-target: var(--target);
+  --spacing-target-floor: var(--target-floor);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+:focus-visible {
+  outline-color: var(--focus);
+}
+
+/* A changed byte: hatched as well as coloured, so it reads without colour. */
+.pattern-changed {
+  background-image: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--diff-on) 28%, transparent) 0 3px,
+    transparent 3px 7px
+  );
+}
+
+/* Reduced motion: no tweening anywhere. Step changes are instant. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+/* Prose inside MDX walkthroughs. */
+.prose-cv {
+  line-height: 1.7;
+}
+.prose-cv p {
+  margin-block: 0.75rem;
+}
+.prose-cv h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-block: 1rem 0.5rem;
+}
+.prose-cv h3 {
+  font-weight: 600;
+  margin-block: 0.75rem 0.25rem;
+}
+.prose-cv ul {
+  list-style: disc;
+  padding-inline-start: 1.25rem;
+}
+.prose-cv ol {
+  list-style: decimal;
+  padding-inline-start: 1.25rem;
+}
+.prose-cv code {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.9em;
+  background: var(--surface-overlay);
+  border-radius: 0.25rem;
+  padding: 0.05rem 0.3rem;
+}
+.prose-cv a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-cv strong {
+  font-weight: 600;
 }
