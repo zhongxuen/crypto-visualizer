@@ -13,7 +13,10 @@ test.describe('home page', () => {
   });
 
   test('renders one card per registry entry', async ({ page }) => {
-    const cards = page.getByRole('list').getByRole('listitem');
+    const cards = page
+      .getByRole('region', { name: 'Modules' })
+      .getByRole('list')
+      .getByRole('listitem');
     await expect(cards).toHaveCount(MODULES.length);
 
     for (const entry of MODULES) {

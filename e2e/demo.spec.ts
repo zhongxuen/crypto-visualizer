@@ -39,7 +39,7 @@ test.describe('/demo building blocks', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/demo');
     const duration = await page
-      .getByRole('button', { name: 'Play' })
+      .getByRole('button', { name: 'Play', exact: true })
       .evaluate((node) => getComputedStyle(node).transitionDuration);
     expect(parseFloat(duration)).toBeLessThan(0.02);
   });

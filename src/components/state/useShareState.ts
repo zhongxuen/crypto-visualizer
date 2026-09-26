@@ -15,7 +15,8 @@ import {
  *
  * Reading: the server render and the first client render use the module's defaults (a
  * static page has no query string), and the link's state is applied right after
- * hydration. Decoding never throws; a bad link opens the defaults.
+ * hydration. Decoding never throws; a bad link opens the defaults. `linked` keeps what
+ * the link said, unchanged, so a page can apply its step once.
  *
  * Writing: debounced, with `history.replaceState`, which the App Router keeps in step
  * with its own state. Replacing rather than pushing means scrubbing through a 300-step
@@ -30,6 +31,8 @@ export interface UseShareState<S extends ShareStateBase> {
   setState(next: S | ((current: S) => S)): void;
   /** True once the URL has been read. Before that `state` is the defaults. */
   ready: boolean;
+  /** The state the link decoded to, once read; `null` before. Never changes after. */
+  linked: S | null;
   /** False when the current state is too large for a link (over 2 KB encoded). */
   shareable: boolean;
 }
@@ -39,15 +42,17 @@ export function useShareState<S extends ShareStateBase>(
   { delayMs = 300 }: { delayMs?: number } = {},
 ): UseShareState<S> {
   const [state, setStateRaw] = useState<S>(definition.defaults);
-  const [ready, setReady] = useState(false);
+  const [linked, setLinked] = useState<S | null>(null);
   const [shareable, setShareable] = useState(true);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ready = linked !== null;
 
   useEffect(() => {
     // The URL is only readable after hydration; this effect is the sync from it.
+    const fromLink = shareStateFromSearch(definition, window.location.search);
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setStateRaw(shareStateFromSearch(definition, window.location.search));
-    setReady(true);
+    setStateRaw(fromLink);
+    setLinked(fromLink);
   }, [definition]);
 
   useEffect(() => {
@@ -73,5 +78,5 @@ export function useShareState<S extends ShareStateBase>(
     );
   }, []);
 
-  return { state, setState, ready, shareable };
+  return { state, setState, ready, linked, shareable };
 }

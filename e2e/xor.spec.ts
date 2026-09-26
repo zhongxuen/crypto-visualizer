@@ -1,0 +1,86 @@
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test, type Page } from '@playwright/test';
+
+/** The share link is written only after hydration, so it marks "keys will work". */
+async function open(page: Page, url = '/xor') {
+  await page.goto(url);
+  await expect(page).toHaveURL(/\?s=/);
+}
+
+test.describe('/xor', () => {
+  test('the walkthrough completes by keyboard alone', async ({ page }) => {
+    await open(page);
+    const status = page.getByRole('status');
+    await expect(status).toContainText('Step 1 of');
+
+    const chapters = ['Text to bytes', 'XOR', 'One-time pad', 'Two-time pad'];
+    for (const [index, title] of chapters.entries()) {
+      await expect(
+        page
+          .getByRole('navigation', { name: 'Chapters' })
+          .getByRole('button', { name: title }),
+      ).toHaveAttribute('aria-current', 'step');
+      await page.keyboard.press('End');
+      if (index < chapters.length - 1) {
+        const next = page.getByRole('button', {
+          name: `Next chapter: ${chapters[index + 1]}`,
+        });
+        await next.focus();
+        await page.keyboard.press('Enter');
+        await page.locator('body').click({ position: { x: 1, y: 1 } });
+      }
+    }
+    await expect(page.getByText('Walkthrough complete.')).toBeVisible();
+    const stored = await page.evaluate(() => localStorage.getItem('cv:v1'));
+    expect(JSON.parse(stored!).completed).toContain('xor');
+  });
+
+  test('the crib drag reveals the other message', async ({ page }) => {
+    await open(page);
+    await page.getByRole('button', { name: 'Two-time pad' }).click();
+    await page.locator('body').click({ position: { x: 1, y: 1 } });
+    // Groups: setup (5 steps), cancel (1), then crib offsets from 0.
+    await page.keyboard.press('Shift+ArrowRight');
+    await page.keyboard.press('Shift+ArrowRight');
+    for (let i = 0; i < 10; i += 1) await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('status')).toContainText('Offset 10');
+    await expect(page.getByRole('status')).toContainText('“hips ”');
+  });
+
+  test('a share link lands on the same chapter and step', async ({ page }) => {
+    await open(page);
+    await page.getByRole('button', { name: 'One-time pad' }).click();
+    await page.locator('body').click({ position: { x: 1, y: 1 } });
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('status')).toContainText('Step 3 of');
+    await expect(page).toHaveURL(/\?s=/);
+    const url = page.url();
+
+    const other = await page.context().newPage();
+    await open(other, url);
+    await expect(other.getByRole('status')).toContainText('Step 3 of');
+    await expect(
+      other
+        .getByRole('navigation', { name: 'Chapters' })
+        .getByRole('button', { name: 'One-time pad' }),
+    ).toHaveAttribute('aria-current', 'step');
+  });
+
+  test('an invalid link falls back to the start', async ({ page }) => {
+    await page.goto('/xor?s=not-a-real-state');
+    await expect(page.getByRole('status')).toContainText('Step 1 of');
+  });
+
+  for (const theme of ['light', 'dark'] as const) {
+    test(`has no axe violations (${theme})`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await open(page);
+      await page.keyboard.press('ArrowRight');
+      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+      await page.getByRole('button', { name: 'Free play' }).click();
+      await page.getByRole('button', { name: 'Two-time pad' }).click();
+      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    });
+  }
+});

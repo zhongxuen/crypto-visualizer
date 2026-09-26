@@ -1,0 +1,74 @@
+import { Chapter } from '@/components/lesson';
+
+<Chapter id="bytes">
+
+## Everything is bytes
+
+Before anything can be encrypted or hashed, text has to become numbers. The standard way
+is **UTF-8**: each character gets a code point, and UTF-8 writes that code point as one to
+four bytes.
+
+Plain English letters are below 128, so each is one byte, the same as ASCII. An accented
+letter like **é** needs two bytes, and an emoji like **🔐** needs four. Step through the
+text and watch each character split.
+
+A byte is eight bits, a number from 0 to 255. **Hex** writes it as two digits from `0–9`
+and `a–f`, so `0x48` is 72, the letter H. **Binary** writes all eight bits. Switch between
+them with the toggle: every later module shows bytes in hex, so it is worth getting used
+to it here.
+
+</Chapter>
+
+<Chapter id="xor">
+
+## XOR: a mask you can take off
+
+**XOR** (exclusive or, written ⊕) compares two bits: the result is 1 when they differ and
+0 when they match. Applied to whole bytes, it works on all eight bit columns at once.
+
+Think of the key as a mask. Wherever a key bit is 1, the message bit flips; wherever it is
+0, the bit stays. Step through the message byte by byte and look at the bit columns.
+
+Then comes the useful part: XOR the masked bytes with **the same key again** and the
+message comes back. Every bit that was flipped gets flipped back. In symbols,
+`x ⊕ k ⊕ k = x`. That one property is why XOR is inside almost every cipher, from the
+one-time pad to AES in counter mode.
+
+</Chapter>
+
+<Chapter id="otp">
+
+## The one-time pad
+
+Use a key that is **completely random**, **as long as the message**, and **used once**,
+and XOR is unbreakable. This is the one-time pad, patented by Gilbert Vernam in 1919.
+
+In 1949 Claude Shannon proved why: for any message you guess, there is exactly one key
+that turns it into the ciphertext you see, and every key was equally likely. The
+ciphertext tells you nothing, not even a hint, about the message. That is called
+**perfect secrecy**.
+
+The catch is the key. It must be truly random, as long as everything you will ever send,
+delivered securely in advance, and destroyed after use. (The key here comes from a seeded
+generator so the run can be replayed. That makes it a picture of a one-time pad, not a
+real one.)
+
+</Chapter>
+
+<Chapter id="ttp">
+
+## Use it twice and it breaks
+
+Now break the rule: encrypt **two** messages with the same key. Each ciphertext on its own
+still looks random. But an eavesdropper who has both can XOR them together, and the key
+cancels out: `c1 ⊕ c2 = p1 ⊕ p2`.
+
+What is left is the two messages mixed with each other, and English is full of patterns.
+Guess a common word (a **crib**, like `" the "`) and slide it along. Where the guess is
+right in one message, XORing it out shows the other message's text at that spot, and it
+reads as words. Everywhere else you get gibberish.
+
+This is not hypothetical. Soviet agencies reused one-time pad pages in the 1940s, and US
+codebreakers in the Venona project read thousands of messages this way.
+
+</Chapter>

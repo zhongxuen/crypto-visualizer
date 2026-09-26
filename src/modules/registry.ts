@@ -34,7 +34,7 @@ export const MODULES: readonly ModuleEntry[] = [
     blurb:
       'Text becomes UTF-8 bytes, then hex and binary. XOR as a reversible mask, the one-time pad, and why reusing its key breaks it.',
     number: 1,
-    status: 'planned',
+    status: 'ready',
     phase: 1,
   },
   {
