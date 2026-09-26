@@ -12,6 +12,7 @@
 
 import type { CryptoEvent } from './events/types';
 import type { SimResult } from './sim/result';
+import { XOR_SCENARIOS } from './xor/scenarios';
 
 export interface Scenario {
   /** Unique across the catalogue, `<algo>.<name>`, e.g. `'aes.fips197-appendix-b'`. */
@@ -20,4 +21,4 @@ export interface Scenario {
   run: () => SimResult<CryptoEvent>;
 }
 
-export const SCENARIOS: readonly Scenario[] = [];
+export const SCENARIOS: readonly Scenario[] = [...XOR_SCENARIOS];

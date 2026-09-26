@@ -8,9 +8,10 @@
  * round-trip through a link.
  */
 
+import { XOR_SHARE_STATE } from '../xor/state';
 import type { ModuleShareState } from './schema';
 
-export const SHARE_STATES: readonly ModuleShareState[] = [];
+export const SHARE_STATES: readonly ModuleShareState[] = [XOR_SHARE_STATE];
 
 export {
   defineShareState,
