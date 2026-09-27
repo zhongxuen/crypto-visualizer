@@ -84,7 +84,7 @@ export const MODULES: readonly ModuleEntry[] = [
     blurb:
       'The paint-mixing analogy, then real modular exponentiation. What an eavesdropper sees, and a man-in-the-middle when nothing is authenticated.',
     number: 6,
-    status: 'planned',
+    status: 'ready',
     phase: 1,
   },
   {

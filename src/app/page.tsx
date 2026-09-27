@@ -21,7 +21,7 @@ export default function Home() {
         </h2>
         <ul className="grid gap-4 sm:grid-cols-2">
           {MODULES.map((entry) => (
-            <li key={entry.slug}>
+            <li key={entry.slug} id={`module-${entry.slug}`} className="scroll-mt-6">
               <ModuleCard entry={entry} />
             </li>
           ))}

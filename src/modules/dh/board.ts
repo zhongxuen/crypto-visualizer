@@ -1,0 +1,202 @@
+import type { DhEvent, DhParty } from '@/core/dh/events';
+
+/**
+ * Who knows what, so far. The lanes read the run's events up to the current step and put
+ * each value in the lane of whoever holds it. Nothing here computes: every value is one
+ * a core event carried.
+ */
+
+export type LaneId = 'alice' | 'public' | 'bob' | 'malloryA' | 'malloryB' | 'eve';
+
+/**
+ * - `private`: only its owner knows it (a, b, Mallory's keys).
+ * - `share`: a public key share, safe to send.
+ * - `secret`: a shared secret.
+ * - `fake`: a share that isn't what its receiver thinks (Mallory's swap).
+ * - `check`: a validation result or a decrypted message.
+ */
+export type ItemTone = 'private' | 'share' | 'secret' | 'fake' | 'check' | 'public';
+
+export interface BoardItem {
+  key: string;
+  name: string;
+  /** A decimal integer or short text. Absent: unknown to this lane (shown as "?"). */
+  value?: string;
+  /** A paint colour, `#rrggbb`. */
+  colour?: string;
+  note?: string;
+  tone: ItemTone;
+  /** The step that added it. */
+  step: number;
+}
+
+export type Board = Record<LaneId, BoardItem[]>;
+
+const WHO: Record<DhParty, string> = { alice: 'Alice', bob: 'Bob' };
+
+function emptyBoard(): Board {
+  return { alice: [], public: [], bob: [], malloryA: [], malloryB: [], eve: [] };
+}
+
+/** Everything each lane holds after step `index` (0-based) of `events`. */
+export function buildBoard(events: readonly DhEvent[], index: number): Board {
+  const board = emptyBoard();
+  const last = Math.min(index, events.length - 1);
+  for (let step = 0; step <= last; step += 1) {
+    const e = events[step];
+    const put = (lane: LaneId, item: Omit<BoardItem, 'key' | 'step'>) =>
+      board[lane].push({ ...item, key: `${step}.${board[lane].length}`, step });
+    switch (e.kind) {
+      case 'dh.paintPot':
+        put(e.actor === 'public' ? 'public' : e.actor === 'bob' ? 'bob' : 'alice', {
+          name: e.role === 'public' ? 'Common colour' : 'Secret colour',
+          value: e.colour,
+          colour: e.colour,
+          tone: e.role === 'public' ? 'public' : 'private',
+        });
+        break;
+      case 'dh.paintMix':
+        put(e.actor === 'bob' ? 'bob' : 'alice', {
+          name: e.recipe.length > 2 ? 'Final pot' : 'Mixture',
+          value: e.colour,
+          colour: e.colour,
+          note: e.recipe.map((part) => `${part.parts} ${part.name}`).join(' + '),
+          tone: e.recipe.length > 2 ? 'secret' : 'share',
+        });
+        break;
+      case 'dh.paintSend':
+        put('public', {
+          name: `${WHO[e.from]}'s mixture`,
+          value: e.colour,
+          colour: e.colour,
+          note: `${WHO[e.from]} → ${WHO[e.to]}`,
+          tone: 'share',
+        });
+        break;
+      case 'dh.paintEve':
+        put('eve', {
+          name: "Eve's mix",
+          value: e.colour,
+          colour: e.colour,
+          note: e.recipe.map((part) => `${part.parts} ${part.name}`).join(' + '),
+          tone: 'fake',
+        });
+        break;
+      case 'dh.params':
+        put('public', { name: 'p', value: e.p, tone: 'public' });
+        put('public', { name: 'g', value: e.g, tone: 'public' });
+        break;
+      case 'dh.private': {
+        const lane: LaneId =
+          e.actor === 'mallory' ? (e.name === 'm₁' ? 'malloryA' : 'malloryB') : e.actor;
+        put(lane, { name: e.name, value: e.value, tone: 'private' });
+        break;
+      }
+      case 'dh.publicKey':
+        put(e.actor === 'mallory' ? 'malloryA' : e.actor, {
+          name: e.name,
+          value: e.value,
+          tone: 'share',
+        });
+        break;
+      case 'dh.send':
+        put('public', {
+          name: e.name,
+          value: e.value,
+          note: `${WHO[e.from]} → ${WHO[e.to]}`,
+          tone: 'share',
+        });
+        break;
+      case 'dh.validate':
+        put(e.actor, {
+          name: `${e.name} checked`,
+          value: e.ok ? 'in the subgroup' : 'rejected',
+          note: `${e.name}^q mod p = ${e.check}`,
+          tone: 'check',
+        });
+        break;
+      case 'dh.shared':
+        if (e.actor === 'alice' || e.actor === 'bob') {
+          put(e.actor, {
+            name: 'Secret',
+            value: e.value,
+            note: e.with === 'mallory' ? 'shared with Mallory' : undefined,
+            tone: 'secret',
+          });
+        }
+        break;
+      case 'dh.eveView':
+        put('public', { name: 'A', value: e.A, tone: 'share' });
+        put('public', { name: 'B', value: e.B, tone: 'share' });
+        put('alice', { name: 'a', tone: 'private' });
+        put('bob', { name: 'b', tone: 'private' });
+        break;
+      case 'dh.eveFound':
+        put('eve', {
+          name: 'a',
+          value: e.x,
+          note: `after ${e.tries} guesses`,
+          tone: 'private',
+        });
+        put('eve', {
+          name: 'Secret',
+          value: e.shared,
+          note: 'B^a mod p',
+          tone: 'secret',
+        });
+        break;
+      case 'dh.mitmIntercept': {
+        const catcher: LaneId = e.from === 'alice' ? 'malloryA' : 'malloryB';
+        put(catcher, {
+          name: `Caught ${e.name}`,
+          value: e.original,
+          note: `from ${WHO[e.from]}`,
+          tone: 'share',
+        });
+        put(e.to, {
+          name: `“${e.name}”`,
+          value: e.replacement,
+          note: `really Mallory's ${e.replacementName}`,
+          tone: 'fake',
+        });
+        break;
+      }
+      case 'dh.mitmKeys':
+        put('malloryA', {
+          name: 'Secret with Alice',
+          value: e.malloryWithAlice,
+          tone: 'secret',
+        });
+        put('malloryB', {
+          name: 'Secret with Bob',
+          value: e.malloryWithBob,
+          tone: 'secret',
+        });
+        break;
+      case 'dh.mitmMessage': {
+        const lane: LaneId =
+          e.actor === 'mallory'
+            ? e.action === 'decrypt'
+              ? 'malloryA'
+              : 'malloryB'
+            : e.actor;
+        put(lane, {
+          name: e.action === 'encrypt' ? 'Sends c' : 'Reads m',
+          value: e.output,
+          note: e.action === 'encrypt' ? `m = ${e.input}` : `c = ${e.input}`,
+          tone: e.action === 'encrypt' ? 'share' : 'check',
+        });
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  return board;
+}
+
+/** A long decimal as its first and last digits, for a lane. */
+export function shortNumber(value: string, keep = 6): string {
+  if (value.length <= keep * 2 + 3) return value;
+  return `${value.slice(0, keep)}…${value.slice(-keep)} (${value.length} digits)`;
+}

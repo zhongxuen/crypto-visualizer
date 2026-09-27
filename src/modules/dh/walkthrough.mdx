@@ -1,0 +1,82 @@
+import { Chapter } from '@/components/lesson';
+
+<Chapter id="paint">
+
+## Mixing paint in public
+
+Alice and Bob want a shared secret, but every message between them is read by **Eve**.
+Start with paint.
+
+1. They agree in public on a **common colour**, yellow.
+2. Each picks a **secret colour** and tells no one: red for Alice, blue for Bob.
+3. Each mixes the common colour with their secret one and sends the mixture across in
+   the open.
+4. Each adds their own secret colour to the mixture they received.
+
+Both final pots hold one part yellow, one part red and one part blue, so they are the
+same colour. Eve saw yellow and both mixtures, but mixing those gives _two_ parts yellow.
+To match, she would have to pour a colour back out.
+
+The analogy has a limit, and the last step says where: paint mixing is an average, and an
+average can be undone. The real thing needs an operation that can't.
+
+</Chapter>
+
+<Chapter id="exchange">
+
+## The same thing with numbers
+
+Swap paint for arithmetic mod a prime. The public colour becomes two public numbers:
+the prime **p = 23** and the generator **g = 2**. Here p = 2 × 11 + 1 is a _safe prime_,
+and the powers of 2 mod 23 cycle through 11 values: the clock shows them.
+
+1. Alice picks a private **a = 6**, Bob a private **b = 8**. In this module they come
+   from a seeded, non-cryptographic generator, so they are for display only.
+2. Alice computes **A = 2⁶ mod 23 = 18** and Bob **B = 2⁸ mod 23 = 3**, by
+   square-and-multiply, one exponent bit at a time.
+3. They send A and B in the open. Each checks that what arrived is in the subgroup
+   (**y¹¹ mod 23 = 1**).
+4. Alice computes **Bᵃ = 3⁶ mod 23 = 16**; Bob computes **Aᵇ = 18⁸ mod 23 = 16**.
+
+Both get **16**, because (gᵇ)ᵃ = gᵃᵇ = (gᵃ)ᵇ. The number 16 never crossed the channel.
+Turn on **Eve’s view** to see what an eavesdropper has: p, g, A and B, and nothing
+else.
+
+</Chapter>
+
+<Chapter id="eve">
+
+## What Eve can do
+
+Eve has **p = 23, g = 2, A = 18 and B = 3**. To get the secret she needs a, and getting
+a from A = gᵃ mod p is the **discrete logarithm** problem. With p = 23 she just tries
+every exponent: 2¹, 2², 2³, … until one gives 18. After six guesses she has **a = 6**,
+and **B⁶ mod 23 = 16**, the secret.
+
+That only works because p is tiny. The table at the end shows how the number of guesses
+grows: roughly ten times per extra digit of p. Real groups (RFC 3526, RFC 7919) use a
+617-digit p, and the worst case becomes a 617-digit number of guesses. Better attacks
+than guessing exist, and 2048 bits is chosen so that they are out of reach too.
+
+</Chapter>
+
+<Chapter id="mitm">
+
+## Mallory in the middle
+
+Eve only listens. **Mallory** can also change what's sent. Plain Diffie-Hellman never
+says _who_ sent a share, so Mallory, with p = 467, catches Alice's A and Bob's B and
+forwards shares of her own.
+
+Alice ends up with a secret she shares with Mallory, Bob with a different one, and
+Mallory holds both. When Alice sends a message (here 42, with a toy cipher), Mallory
+decrypts it, reads it, re-encrypts it for Bob, and Bob sees exactly what he expected.
+The four lanes show who holds what.
+
+The fix is to **prove who sent each share**. If Bob signs B with his private key, Alice
+can check it with his public key, and Mallory can't forge that signature. That is
+[RSA signing, from module 5](/rsa). And it is what [TLS 1.3](/#module-tls) does: the
+server signs the whole handshake, key shares included, with a key its certificate
+vouches for.
+
+</Chapter>
