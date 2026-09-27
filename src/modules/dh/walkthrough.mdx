@@ -28,7 +28,7 @@ average can be undone. The real thing needs an operation that can't.
 
 Swap paint for arithmetic mod a prime. The public colour becomes two public numbers:
 the prime **p = 23** and the generator **g = 2**. Here p = 2 × 11 + 1 is a _safe prime_,
-and the powers of 2 mod 23 cycle through 11 values: the clock shows them.
+and the powers of 2 mod 23 cycle through 11 values, listed under the first step.
 
 1. Alice picks a private **a = 6**, Bob a private **b = 8**. In this module they come
    from a seeded, non-cryptographic generator, so they are for display only.
@@ -51,7 +51,7 @@ else.
 Eve has **p = 23, g = 2, A = 18 and B = 3**. To get the secret she needs a, and getting
 a from A = gᵃ mod p is the **discrete logarithm** problem. With p = 23 she just tries
 every exponent: 2¹, 2², 2³, … until one gives 18. After six guesses she has **a = 6**,
-and **B⁶ mod 23 = 16**, the secret.
+and **B⁶ mod 23 = 16**, the secret. Her own lane fills in as she works it out.
 
 That only works because p is tiny. The table at the end shows how the number of guesses
 grows: roughly ten times per extra digit of p. Real groups (RFC 3526, RFC 7919) use a

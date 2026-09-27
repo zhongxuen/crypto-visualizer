@@ -72,8 +72,12 @@ describe('DhModule', () => {
     expect(screen.getByRole('status')).toHaveTextContent('That is A');
     const table = screen.getByRole('region', { name: "Eve's guesses" });
     expect(within(table).getAllByRole('row')).toHaveLength(7);
+    const eveLane = () => screen.getByRole('list', { name: 'Eve holds' });
+    expect(() => eveLane()).toThrow();
     next();
     expect(screen.getByTestId('dh-eve-a')).toHaveTextContent('6');
+    expect(eveLane()).toHaveTextContent('a6');
+    expect(eveLane()).toHaveTextContent('Secret16');
     expect(screen.getByTestId('dh-eve-secret')).toHaveTextContent('16');
     end();
     const growth = screen.getByTestId('dh-growth');

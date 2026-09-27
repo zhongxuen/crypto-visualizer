@@ -50,6 +50,7 @@ const DEFAULTS = DH_SHARE_STATE.defaults;
 const EMPTY_RUN = createRun<DhEvent>().finish();
 
 const THREE_LANES: readonly LaneId[] = ['alice', 'public', 'bob'];
+const WITH_EVE: readonly LaneId[] = ['alice', 'public', 'bob', 'eve'];
 const FOUR_LANES: readonly LaneId[] = ['alice', 'malloryA', 'malloryB', 'bob'];
 
 function isDefaultInput(state: DhState): boolean {
@@ -196,6 +197,8 @@ export function DhModule({ walkthrough }: { walkthrough?: ReactNode }) {
   const groupName =
     params && isGroupId(params.groupId) ? getGroup(params.groupId).name : undefined;
   const eve = scene === 'eve' || (scene === 'exchange' && eveOverlay);
+  // Eve's own lane: always in her chapter, and in the paint chapter once she mixes.
+  const showEveLane = scene === 'eve' || (scene === 'paint' && board.eve.length > 0);
 
   return (
     <ModuleLayout
@@ -294,10 +297,14 @@ export function DhModule({ walkthrough }: { walkthrough?: ReactNode }) {
               ) : null}
               <Lanes
                 board={board}
-                lanes={THREE_LANES}
+                lanes={showEveLane ? WITH_EVE : THREE_LANES}
                 index={view.index}
                 eve={eve}
-                label="Alice, the public channel and Bob"
+                label={
+                  showEveLane
+                    ? 'Alice, the public channel, Bob and Eve'
+                    : 'Alice, the public channel and Bob'
+                }
               />
             </div>
           )}

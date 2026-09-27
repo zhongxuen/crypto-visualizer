@@ -95,6 +95,7 @@ test.describe('/dh', () => {
     await expect(status).toContainText('x = 6: 2^6 mod 23 = 18. That is A.');
     await page.keyboard.press('ArrowRight');
     await expect(page.getByTestId('dh-eve-secret')).toHaveText('16');
+    await expect(page.getByRole('list', { name: 'Eve holds' })).toContainText('Secret16');
     await page.keyboard.press('End');
     const growth = page.getByTestId('dh-growth');
     await expect(growth.locator('tbody tr')).toHaveCount(6);
