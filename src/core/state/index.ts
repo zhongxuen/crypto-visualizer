@@ -9,6 +9,7 @@
  */
 
 import { AES_SHARE_STATE } from '../aes/state';
+import { DH_SHARE_STATE } from '../dh/state';
 import { PASSWORDS_SHARE_STATE } from '../kdf/state';
 import { RSA_SHARE_STATE } from '../rsa/state';
 import { HASHING_SHARE_STATE } from '../sha256/state';
@@ -21,6 +22,7 @@ export const SHARE_STATES: readonly ModuleShareState[] = [
   PASSWORDS_SHARE_STATE,
   AES_SHARE_STATE,
   RSA_SHARE_STATE,
+  DH_SHARE_STATE,
 ];
 
 export {
