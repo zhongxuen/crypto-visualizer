@@ -169,6 +169,8 @@ test.describe('/aes', () => {
 
   for (const theme of ['light', 'dark'] as const) {
     test(`has no axe violations (${theme})`, async ({ page }) => {
+      // About 45 s alone: many views, each a full axe pass. Under a loaded run it needs room.
+      test.slow();
       await page.emulateMedia({ colorScheme: theme });
       await open(page);
       const nav = page.getByRole('navigation', { name: 'Chapters' });

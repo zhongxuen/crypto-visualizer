@@ -64,5 +64,5 @@ describe('AesModule', () => {
     }
     fireEvent.click(screen.getByRole('button', { name: 'Free play' }));
     await expectNoAxeViolations(container);
-  });
+  }, 30_000);
 });
