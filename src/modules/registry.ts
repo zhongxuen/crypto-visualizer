@@ -74,7 +74,7 @@ export const MODULES: readonly ModuleEntry[] = [
     blurb:
       'Primes small enough to check on paper: n, φ(n), e and d by extended Euclid, then encrypt, decrypt, sign and verify.',
     number: 5,
-    status: 'planned',
+    status: 'ready',
     phase: 1,
   },
   {
