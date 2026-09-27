@@ -8,6 +8,7 @@
  * round-trip through a link.
  */
 
+import { AES_SHARE_STATE } from '../aes/state';
 import { PASSWORDS_SHARE_STATE } from '../kdf/state';
 import { HASHING_SHARE_STATE } from '../sha256/state';
 import { XOR_SHARE_STATE } from '../xor/state';
@@ -17,6 +18,7 @@ export const SHARE_STATES: readonly ModuleShareState[] = [
   XOR_SHARE_STATE,
   HASHING_SHARE_STATE,
   PASSWORDS_SHARE_STATE,
+  AES_SHARE_STATE,
 ];
 
 export {
