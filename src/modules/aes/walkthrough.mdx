@@ -1,0 +1,105 @@
+import { Chapter } from '@/components/lesson';
+
+<Chapter id="block">
+
+## One block through AES-128
+
+AES is a **block cipher**: it turns 16 bytes of plaintext into 16 bytes of ciphertext
+under a 16-byte key, and back again with the same key. Those 16 bytes sit in a 4×4 grid
+called the **state**, filled column by column.
+
+Encryption is ten **rounds**, each built from four simple steps:
+
+- **SubBytes** swaps every byte through a fixed table, the S-box. It is the only
+  non-linear step.
+- **ShiftRows** slides row 1 one place left, row 2 two places and row 3 three.
+- **MixColumns** mixes the four bytes of each column so each output byte depends on all
+  four inputs.
+- **AddRoundKey** XORs in a round key made from the key. It is the only step that uses
+  the key.
+
+The last round leaves out MixColumns, and the key goes in once before the first round.
+The block here is the worked example in FIPS 197 (Appendix C.1): step to the end and the
+ciphertext is `69c4e0d86a7b0430d8cdb78070b4c55a`, as printed in the standard.
+Decryption runs the inverse of each step in reverse order; it isn't stepped here.
+
+</Chapter>
+
+<Chapter id="keys">
+
+## The key schedule
+
+AES-128 needs eleven round keys, one per AddRoundKey, from one 16-byte key. The **key
+expansion** stretches the key into 44 four-byte **words**, `w0` to `w43`; each round key
+is four of them.
+
+The first four words are the key itself. After that, each word is the word four places
+back XORed with the word just before it. The first word of every round key gets extra
+treatment first: rotate it by one byte (**RotWord**), put each byte through the S-box
+(**SubWord**) and XOR in a round constant (**Rcon**).
+
+The key here is the one expanded in FIPS 197 Appendix A.1, so every word can be checked
+against the standard.
+
+</Chapter>
+
+<Chapter id="avalanche">
+
+## The avalanche effect
+
+Flip one bit of the plaintext and follow both blocks through the rounds. AddRoundKey
+XORs the same key into both, so after round 0 they still differ by one bit. Then
+SubBytes spreads the difference across its byte, and ShiftRows and MixColumns spread it
+across the state.
+
+By round 2 or 3, about **half of the 128 bits** differ, and it stays near half: the
+ciphertexts of two nearly equal blocks look unrelated.
+
+</Chapter>
+
+<Chapter id="modes">
+
+## Modes: more than one block
+
+AES only does 16 bytes. A **mode** says how to encrypt a longer message with it.
+
+- **ECB** encrypts every block on its own. Equal plaintext blocks give equal ciphertext
+  blocks, so the pattern of the message leaks. The message here repeats
+  `ATTACK AT DAWN!!` twice: watch blocks 1 and 2.
+- **CBC** XORs each plaintext block with the previous ciphertext block (the first with a
+  random **IV**) before encrypting, so repeats disappear.
+- **CTR** encrypts a counter and XORs the result into the plaintext, like a one-time pad
+  made by AES. The same counter must never be used twice with one key.
+
+ECB and CBC need the last block filled with **PKCS#7 padding**; CTR doesn't. Pick a mode
+above. The IV and nonce here come from a seeded generator so the run repeats exactly;
+a real one comes from a cryptographic random source.
+
+</Chapter>
+
+<Chapter id="penguin">
+
+## The ECB penguin
+
+A picture shows the ECB leak at a glance. Here a small penguin, 4 bytes per pixel, is
+encrypted as one long message. With **ECB**, every run of 4 identical pixels becomes the
+same 16 bytes of ciphertext, so the shapes survive and only the colours change. With
+**CBC**, every block depends on the one before it and the picture turns to noise.
+
+The penguin was drawn for this project; it stands in for the well-known ECB picture of
+Tux.
+
+</Chapter>
+
+<Chapter id="gcm">
+
+## GCM: encryption you can trust
+
+CBC and CTR hide a message but don't notice if someone changes it on the way. **GCM**
+adds an authentication tag: CTR for secrecy, and a fast polynomial hash, **GHASH**, over
+the ciphertext for integrity. It is the mode TLS 1.3 uses for most connections.
+
+This chapter only **describes** GCM; nothing here computes a tag. The TLS 1.3 module in
+phase 2 does it with real values.
+
+</Chapter>

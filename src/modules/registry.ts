@@ -64,7 +64,7 @@ export const MODULES: readonly ModuleEntry[] = [
     blurb:
       'One 16-byte block through AES-128, round by round on a 4×4 grid. Then the modes: ECB and its leak, CBC with padding, and CTR.',
     number: 4,
-    status: 'planned',
+    status: 'ready',
     phase: 1,
   },
   {
