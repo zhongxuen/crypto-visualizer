@@ -21,8 +21,8 @@ Everything here is judged against the project aims in `CLAUDE.md`. Two of them c
 the design work directly:
 
 - **Aim 5 (quality bar):** axe on every route, keyboard-only use, reduced motion, and
-  **170 KB of gzipped first-load JS per module route**. Three routes are already over it
-  (§3), so the motion work has to be CSS-first and cheap.
+  **170 KB of gzipped first-load JS per module route**. Every route is inside it now, but
+  `/rsa` has 0.4 KB left (§3, B2), so the motion work has to be CSS-first and cheap.
 - **Aim 4 (honesty):** the redesign must not hide the "for learning only" message. It can
   say it once, clearly, instead of three times.
 
@@ -45,7 +45,7 @@ deployment existed for the domain to point at.
    hydration, so they were changed to wait for that code
    (`src/modules/dh/DhModule.test.tsx`, test-only).
 2. `npm run verify`: lint, typecheck, 661 tests (99.8% core coverage) and the build all
-   pass. The bundle budget fails (§3, B2).
+   pass. The bundle budget failed then (§3, B2); it passes since the B2 fix.
 3. The work was committed as `fde4d30`, `main` was fast-forwarded to it, and both branches
    were pushed.
 4. Vercel production deployment `dpl_2WrNCwp6ESzYfdASfzqzVwW9EgfZ` is READY, aliased to
@@ -58,7 +58,9 @@ deployment existed for the domain to point at.
   through on an admin bypass. **Decided 2026-10-01:** work is committed and pushed straight
   to `main`, with no branch or PR unless one is actually needed (the parallel worktrees in
   wave 2). Either relax the branch rule on GitHub or keep relying on the bypass.
-- Get the three over-budget routes back under 170 KB (B2).
+- ~~Get the three over-budget routes back under 170 KB (B2).~~ Done: all six module
+  routes are within budget and `npm run verify` runs `perf:bundles`. Getting them to
+  165 KB for the motion work is still open (U0.2).
 
 ---
 
@@ -175,7 +177,7 @@ Each point says what happened, why it hurts a learner, and the fix (referenced i
 |---|---|---|---|---|
 | B0 | Critical | Deploy | The production URL was a 404 (§1). | **Fixed.** |
 | B1 | High | `/rsa` walkthrough, `globals.css` | `.prose-cv` has no table styles, so GFM tables in MDX render with 0 px cell padding and the columns run together. Only `rsa/walkthrough.mdx` has a table today, but any future table breaks the same way. | Add `.prose-cv table/th/td` styles (padding, borders, right-aligned numeric columns with tabular figures), wrapped in a horizontal scroller on small screens. (W0.1) |
-| B2 | High | Build | `npm run perf:bundles` fails: `/rsa` 177.6 KB, `/aes` 176.8 KB and `/passwords` 174.9 KB, against the 170 KB budget. `/hashing` (169.6) and `/dh` (168.6) have almost no room left. | Use the deferred-import pattern `/dh` uses for non-first chapters and Free-play inputs on those three routes. Do this **before** the motion work, which needs the room. (W0.2) |
+| B2 | High | Build | **Fixed to 170 KB.** Was: `/rsa` 177.6, `/aes` 176.8, `/passwords` 174.9 KB. Now: `/rsa` 169.6, `/aes` 167.7, `/passwords` 167.3, `/hashing` 167.2, `/dh` 165.3, `/xor` 164.3 KB, from deferring every non-first chapter's run and views (`useDeferredImport`) and giving each page only its own citations (`ModuleLayout`'s `citations` prop). Still open: 165 KB headroom for the motion work. | See CLAUDE.md for the pattern. Walkthrough views must **not** go behind `next/dynamic`: a view that suspends mid-walkthrough swallows an arrow-key press (it broke `e2e/dh.spec.ts`). (W0.2) |
 | B3 | Medium | `PlaybackControls` | Next and ⏭ stay enabled at the last step, and Back and ⏮ at the first. A press does nothing and gives no feedback. | Set `aria-disabled` and dim them at the ends (keep them focusable so keyboard focus isn't lost). (W0.1) |
 | B4 | Medium | `rsa/components/*` value panel | The value display looks like a focused `<input>` (wide box, accent outline). | Restyle it as a read-only value card (W2.5). |
 | B5 | Medium | `hashing` round view | `Σ0`, `Σ1` render in a fallback font with a different size and baseline from the mono digits. | Use a mono font that has Σ and σ (JetBrains Mono does), or wrap the symbols in a span with the sans font at a matched size. (W1.1) |
@@ -543,13 +545,14 @@ Commit to main and push.
 
 ```
 Read CLAUDE.md (the LazyShareState and perf/bundles.mjs rules) and docs/UIUX.md §3 B2.
-/rsa (177.6 KB), /aes (176.8 KB) and /passwords (174.9 KB) are over the 170 KB
-first-load budget. Bring each under 165 KB to leave room for the motion work, without
-changing behaviour.
+Every module route is within the 170 KB first-load budget (/rsa 169.6, /aes 167.7,
+/passwords 167.3, /hashing 167.2 KB). Bring each under 165 KB to leave room for the
+motion work, without changing behaviour.
 
-Use the pattern src/modules/dh/DhModule.tsx already uses: the first chapter's run and
-view stay in first-load JS; later chapters' runs load through useDeferredImport and
-their views and the Free-play inputs through next/dynamic. Check nothing imports
+Use the pattern every module already uses (CLAUDE.md): the first chapter's run and
+view stay in first-load JS; later chapters' runs and views load through
+useDeferredImport (render them from the loaded module, never through next/dynamic,
+which can swallow an arrow-key press); only the Free-play inputs use next/dynamic. Check nothing imports
 runtime values from src/core/<algo>/state.ts. Update the module tests to wait for the
 deferred code the way src/modules/dh/DhModule.test.tsx does (renderLoaded + findBy).
 

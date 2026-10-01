@@ -1,15 +1,20 @@
+'use client';
+
 import { ExternalLink } from 'lucide-react';
 
-import { CITATIONS, type CitationId } from '@/core/citations';
+import type { CitationId } from '@/core/citations/types';
 import { cn } from '@/lib/cn';
 
+import { useCitations } from './CitationsContext';
+
 /**
- * A link to the exact section of the standard a step comes from. An unknown id (which
- * `tests/citations.test.ts` should make impossible) renders as plain text, never a
- * broken link.
+ * A link to the exact section of the standard a step comes from, looked up in the page's
+ * registry (`CitationsProvider`). An unknown id (which `tests/citations.test.ts` and
+ * `tests/module-citations.test.ts` should make impossible) renders as plain text, never
+ * a broken link.
  */
 export function CitationLink({ id, className }: { id: CitationId; className?: string }) {
-  const citation = CITATIONS.get(id);
+  const citation = useCitations().get(id);
   if (!citation) {
     return <span className={cn('text-fg-muted text-sm', className)}>Source: {id}</span>;
   }

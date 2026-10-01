@@ -1,12 +1,13 @@
 'use client';
 
 import { ChevronRight } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { StepInspector } from '@/components/inspector';
 import { ChapterContext, ChapterTabs } from '@/components/lesson';
 import { ModuleLayout, type ModuleMode } from '@/components/shell';
-import { useProgress, useShareState } from '@/components/state';
+import { useDeferredImport, useProgress, useShareState } from '@/components/state';
 import {
   BUTTON,
   PhaseStepper,
@@ -20,7 +21,6 @@ import { RSA_SHARE, type RsaChapter } from '@/core/rsa/share';
 
 import { EgcdView } from './components/EgcdView';
 import { FormulaPanel } from './components/FormulaPanel';
-import { FreePlayInputs } from './components/Inputs';
 import { MalleabilityStrip, PaddingView } from './components/MalleabilityStrip';
 import { PowResultView, PowStepView } from './components/PowView';
 import {
@@ -33,14 +33,25 @@ import {
   TamperView,
 } from './components/StepView';
 import { Value } from './components/parts';
+import { RSA_PAGE_CITATIONS } from './citations';
 import { RSA_CHAPTER_LIST, RSA_META } from './meta';
-import { rsaRunFor } from './runs';
+import { keysRunFor } from './keysRun';
 
 type RsaState = typeof RSA_SHARE.defaults;
 type RsaInput = RsaState['input'];
 
 const DEFAULTS = RSA_SHARE.defaults;
 const EMPTY_RUN = createRun<RsaEvent>().finish();
+
+/** Every chapter's run builder, loaded right after hydration (keys' is static). */
+const loadRuns = () => import('./runs');
+
+// Free play's inputs load when free play is first opened, not in the route's first load
+// (phase 10's 170 KB budget). Walkthrough views stay static: a view that suspends while
+// a learner steps through can swallow an arrow-key press.
+const FreePlayInputs = dynamic(() =>
+  import('./components/Inputs').then((m) => m.FreePlayInputs),
+);
 
 function isDefaultInput(state: RsaState): boolean {
   const d = DEFAULTS.input;
@@ -118,18 +129,26 @@ export function RsaModule({ walkthrough }: { walkthrough?: ReactNode }) {
 
   const { seed } = state;
   const { mode: size, p, q, e, msg, text, bits } = state.input;
+  const runs = useDeferredImport(loadRuns);
+  const loading = chapter !== 'keys' && runs === null;
   const { result, problem } = useMemo(
     () => {
-      const run = rsaRunFor(chapter, mode, state);
+      const run =
+        chapter === 'keys'
+          ? keysRunFor(mode, state)
+          : runs
+            ? runs.rsaRunFor(chapter, mode, state)
+            : { result: null, problem: null };
       return { result: run.result ?? EMPTY_RUN, problem: run.problem };
     },
     // `state.step` changes on every step and must not rebuild the run.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [chapter, mode, size, p, q, e, msg, text, bits, seed],
+    [chapter, mode, size, p, q, e, msg, text, bits, seed, runs],
   );
 
   const view = useRunView(result, {
-    initialStep: linked?.step,
+    // Held back until the run exists, or a link's step would land on an empty run.
+    initialStep: loading ? undefined : linked?.step,
     onStep: (step) =>
       setState((current) => (current.step === step ? current : { ...current, step })),
   });
@@ -161,6 +180,7 @@ export function RsaModule({ walkthrough }: { walkthrough?: ReactNode }) {
 
   return (
     <ModuleLayout
+      citations={RSA_PAGE_CITATIONS}
       title={RSA_META.title}
       intro={RSA_META.intro}
       mode={mode}
@@ -221,7 +241,9 @@ export function RsaModule({ walkthrough }: { walkthrough?: ReactNode }) {
         label={event?.label}
       />
       {!event ? (
-        <p className="text-fg-muted">{problem ?? 'Nothing to show.'}</p>
+        <p className="text-fg-muted">
+          {loading ? 'Loading this chapter…' : (problem ?? 'Nothing to show.')}
+        </p>
       ) : chapter === 'malleability' ? (
         <>
           <MalleabilityStrip events={events} index={view.index} />

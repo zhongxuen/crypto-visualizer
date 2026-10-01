@@ -35,9 +35,9 @@ describe('PasswordsModule privacy', () => {
 
   it('never puts a typed password in the URL or in storage', async () => {
     render(<PasswordsModule />);
-    // The share-state schema is a dynamic import; wait for it so the link is written.
+    // The share-state schema and the PBKDF2 chapter load after hydration; wait for both.
     await act(async () => {
-      await PASSWORDS_SHARE.load();
+      await Promise.all([PASSWORDS_SHARE.load(), import('./runs')]);
     });
     act(() => {
       vi.advanceTimersByTime(500);

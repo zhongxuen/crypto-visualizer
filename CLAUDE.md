@@ -84,6 +84,15 @@ Other fixed rules:
   route's first-load JS.
 - `npm run verify` enforces the 95% `src/core` coverage floor and, through
   `perf/bundles.mjs`, 170 KB of gzipped first-load JS per module route.
+- To stay in that budget, a module's first chapter is static and the rest load right
+  after hydration: `runs.ts` (every chapter's run, and the views only those chapters
+  use) comes in through `useDeferredImport`, and the first chapter's builder lives in its
+  own file (`paintRun.ts`, `keysRun.ts`, `blockRun.ts`, `tableRun.ts`). Hold `initialStep`
+  back until the run exists. Don't put walkthrough views behind `next/dynamic`: a view
+  that suspends mid-walkthrough swallows an arrow-key press. Free play's form may be.
+- `CitationLink` reads the page's registry from context. Each module passes its own
+  (`src/modules/<name>/citations.ts`) to `ModuleLayout`'s `citations` prop;
+  `tests/module-citations.test.ts` checks it covers everything the module's runs cite.
 
 ## Rules for parallel agents (00-overview §4)
 

@@ -1,7 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { CITATIONS } from '@/core/citations';
+
 import { CitationLink } from '../inspector/CitationLink';
+import { CitationsProvider } from '../inspector/CitationsContext';
 import { StepInspector } from '../inspector/StepInspector';
 import { expectNoAxeViolations } from '../testing/axe';
 import { ModuleLayout } from './ModuleLayout';
@@ -12,6 +15,7 @@ describe('ModuleLayout', () => {
     let mode = 'walkthrough';
     render(
       <ModuleLayout
+        citations={CITATIONS}
         title="XOR"
         intro="One line."
         mode="walkthrough"
@@ -32,6 +36,7 @@ describe('ModuleLayout', () => {
   it('is axe clean', async () => {
     const { container } = render(
       <ModuleLayout
+        citations={CITATIONS}
         title="XOR"
         intro="One line."
         mode="free"
@@ -63,13 +68,23 @@ describe('ThemeToggle', () => {
 });
 
 describe('StepInspector and CitationLink', () => {
-  it('links to the cited section', () => {
-    render(<CitationLink id="rfc3629.3" />);
+  it('links to the cited section, from the registry its page provides', () => {
+    render(
+      <CitationsProvider citations={CITATIONS}>
+        <CitationLink id="rfc3629.3" />
+      </CitationsProvider>,
+    );
     const link = screen.getByRole('link', { name: /RFC 3629 §3: UTF-8 definition/ });
     expect(link).toHaveAttribute(
       'href',
       'https://www.rfc-editor.org/rfc/rfc3629#section-3',
     );
+  });
+
+  it('shows text, not a link, when the page provides no registry', () => {
+    render(<CitationLink id="rfc3629.3" />);
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.getByText('Source: rfc3629.3')).toBeInTheDocument();
   });
 
   it('shows an unknown id as text, not a link', () => {

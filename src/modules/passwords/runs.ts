@@ -1,7 +1,5 @@
 import { utf8Encode } from '@/core/bytes/utf8';
-import { createRun } from '@/core/events/builder';
 import type { KdfEvent } from '@/core/kdf/events';
-import { EXAMPLE_USERS, passwordTableRun } from '@/core/kdf/lookupTable';
 import {
   OWASP_PBKDF2_ITERATIONS,
   pbkdf2Run,
@@ -11,7 +9,14 @@ import { PBKDF2_EXAMPLES } from '@/core/kdf/share';
 import type { PasswordsShareState } from '@/core/kdf/state';
 import type { SimResult } from '@/core/sim/result';
 
-export const EMPTY_RUN: SimResult<KdfEvent> = createRun<KdfEvent>().finish();
+import { tableRunFor } from './tableRun';
+
+export { EMPTY_RUN } from './tableRun';
+// For the page, which loads this file after hydration (`useDeferredImport`): the views of
+// the PBKDF2 and cost chapters. They render from the loaded module rather than through
+// `next/dynamic`, so nothing suspends while a learner steps.
+export { CostView } from './components/CostView';
+export { Pbkdf2View } from './components/Pbkdf2View';
 
 /** Key length the module derives: one SHA-256 block. */
 export const DK_LEN = 32;
@@ -42,20 +47,7 @@ export function passwordsRunFor(
   seed: number,
   typed: string,
 ): SimResult<KdfEvent> {
-  const users =
-    mode === 'free' && typed.length > 0
-      ? [...EXAMPLE_USERS, { name: 'you', password: typed }]
-      : EXAMPLE_USERS;
-  switch (input.chapter) {
-    case 'lookup':
-      return passwordTableRun({ users, seed: null });
-    case 'salt':
-      return passwordTableRun({ users, seed });
-    case 'pbkdf2': {
-      const params = pbkdf2Inputs(mode, input, typed);
-      return pbkdf2Run({ ...params, finish: params.iterations <= STEPPED_ITERATIONS });
-    }
-    case 'cost':
-      return EMPTY_RUN;
-  }
+  if (input.chapter !== 'pbkdf2') return tableRunFor(mode, input, seed, typed);
+  const params = pbkdf2Inputs(mode, input, typed);
+  return pbkdf2Run({ ...params, finish: params.iterations <= STEPPED_ITERATIONS });
 }

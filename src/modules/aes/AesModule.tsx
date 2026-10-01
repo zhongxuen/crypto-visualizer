@@ -7,7 +7,7 @@ import { HexBinToggle, useByteFormat } from '@/components/blocks';
 import { StepInspector } from '@/components/inspector';
 import { ChapterContext, ChapterTabs } from '@/components/lesson';
 import { ModuleLayout, type ModuleMode } from '@/components/shell';
-import { useProgress, useShareState } from '@/components/state';
+import { useDeferredImport, useProgress, useShareState } from '@/components/state';
 import {
   BUTTON,
   PhaseStepper,
@@ -17,27 +17,26 @@ import {
 } from '@/components/timeline';
 import type { AesAvalancheEvent, AesEvent, AesModeBlockEvent } from '@/core/aes/events';
 import { MAX_MODE_BYTES } from '@/core/aes/modes/common';
-import { penguinImages } from '@/core/aes/penguin';
 import { AES_MODES, AES_SHARE, type AesChapter } from '@/core/aes/share';
 import { bytesToHex, hexToBytes } from '@/core/bytes/hex';
 import { utf8Decode, utf8Encode } from '@/core/bytes/utf8';
 import { createRun } from '@/core/events/builder';
 import { cn } from '@/lib/cn';
 
-import { AvalancheView } from './components/AvalancheView';
 import { BlockView } from './components/BlockView';
-import { GcmView } from './components/GcmView';
-import { KeyScheduleView } from './components/KeyScheduleView';
-import { MODE_NAMES, ModeView } from './components/ModeView';
-import { PenguinView } from './components/PenguinView';
+import { MODE_NAMES } from './components/modeNames';
+import { AES_PAGE_CITATIONS } from './citations';
 import { AES_CHAPTER_LIST, AES_META } from './meta';
-import { aesInputs, aesRunFor, inputProblem } from './runs';
+import { aesInputs, blockRunFor, inputProblem } from './blockRun';
 
 type AesState = typeof AES_SHARE.defaults;
 type AesInput = AesState['input'];
 
 const DEFAULTS = AES_SHARE.defaults;
 const EMPTY_RUN = createRun<AesEvent>().finish();
+
+/** Every chapter's run builder, loaded right after hydration (the block's is static). */
+const loadRuns = () => import('./runs');
 
 function isDefaultInput(state: AesState): boolean {
   const d = DEFAULTS.input;
@@ -65,20 +64,27 @@ export function AesModule({ walkthrough }: { walkthrough?: ReactNode }) {
 
   const { seed } = state;
   const { mode: cipherMode, keyHex, ptHex, bit } = state.input;
+  const runs = useDeferredImport(loadRuns);
+  const loading = chapter !== 'block' && runs === null;
   const result = useMemo(
-    () => aesRunFor(chapter, mode, state) ?? EMPTY_RUN,
+    () =>
+      (chapter === 'block'
+        ? blockRunFor(mode, state)
+        : runs
+          ? runs.aesRunFor(chapter, mode, state)
+          : null) ?? EMPTY_RUN,
     // `state.step` changes on every step and must not rebuild the run.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [chapter, mode, cipherMode, keyHex, ptHex, bit, seed],
+    [chapter, mode, cipherMode, keyHex, ptHex, bit, seed, runs],
   );
 
   const images = useMemo(() => {
     if (chapter !== 'penguin' || (mode === 'free' && inputProblem(chapter, state.input)))
       return null;
     const { key, seed: ivSeed } = aesInputs(chapter, mode, state);
-    return penguinImages(key, ivSeed);
+    return runs ? runs.penguinImages(key, ivSeed) : null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chapter, mode, keyHex, seed]);
+  }, [chapter, mode, keyHex, seed, runs]);
 
   const modeBlocks = useMemo(
     () =>
@@ -90,7 +96,8 @@ export function AesModule({ walkthrough }: { walkthrough?: ReactNode }) {
   );
 
   const view = useRunView(result, {
-    initialStep: linked?.step,
+    // Held back until the run exists, or a link's step would land on an empty run.
+    initialStep: loading ? undefined : linked?.step,
     onStep: (step) =>
       setState((current) => (current.step === step ? current : { ...current, step })),
   });
@@ -133,6 +140,7 @@ export function AesModule({ walkthrough }: { walkthrough?: ReactNode }) {
 
   return (
     <ModuleLayout
+      citations={AES_PAGE_CITATIONS}
       title={AES_META.title}
       intro={AES_META.intro}
       mode={mode}
@@ -212,21 +220,23 @@ export function AesModule({ walkthrough }: { walkthrough?: ReactNode }) {
       </div>
       {!event ? (
         <p className="text-fg-muted">
-          {(mode === 'free' && inputProblem(chapter, state.input)) ||
-            'Nothing to encrypt: type a message.'}
+          {loading
+            ? 'Loading this chapter…'
+            : (mode === 'free' && inputProblem(chapter, state.input)) ||
+              'Nothing to encrypt: type a message.'}
         </p>
-      ) : event.kind === 'aes.keyWord' ? (
-        <KeyScheduleView event={event} />
-      ) : event.kind === 'aes.avalanche' ? (
-        <AvalancheView event={event} history={avalancheHistory} format={format} />
-      ) : event.kind === 'aes.penguin' ? (
+      ) : runs && event.kind === 'aes.keyWord' ? (
+        <runs.KeyScheduleView event={event} />
+      ) : runs && event.kind === 'aes.avalanche' ? (
+        <runs.AvalancheView event={event} history={avalancheHistory} format={format} />
+      ) : runs && event.kind === 'aes.penguin' ? (
         images ? (
-          <PenguinView event={event} images={images} />
+          <runs.PenguinView event={event} images={images} />
         ) : null
-      ) : event.kind === 'aes.gcm' ? (
-        <GcmView event={event} />
-      ) : chapter === 'modes' ? (
-        <ModeView event={event} blocks={modeBlocks} format={format} />
+      ) : runs && event.kind === 'aes.gcm' ? (
+        <runs.GcmView event={event} />
+      ) : runs && chapter === 'modes' ? (
+        <runs.ModeView event={event} blocks={modeBlocks} format={format} />
       ) : (
         <BlockView event={event} format={format} />
       )}

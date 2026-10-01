@@ -5,6 +5,18 @@ import { expectNoAxeViolations } from '@/components/testing/axe';
 
 import { RsaModule } from './RsaModule';
 
+/**
+ * Renders the page and waits for what it loads after hydration: the other chapters' runs
+ * (`useDeferredImport`) and free play's inputs (`next/dynamic`).
+ */
+async function renderLoaded() {
+  const rendered = render(<RsaModule />);
+  await act(async () => {
+    await Promise.all([import('./runs'), import('./components/Inputs')]);
+  });
+  return rendered;
+}
+
 function chapter(name: string) {
   fireEvent.click(
     within(screen.getByRole('navigation', { name: 'Chapters' })).getByRole('button', {
@@ -22,8 +34,8 @@ describe('RsaModule', () => {
     window.history.replaceState(null, '', '/rsa');
   });
 
-  it('fills the formula panel as the key is made, ending on d = 2753', () => {
-    render(<RsaModule />);
+  it('fills the formula panel as the key is made, ending on d = 2753', async () => {
+    await renderLoaded();
     expect(screen.getByTestId('rsa-formula-n')).toHaveTextContent('?');
     next();
     next();
@@ -32,8 +44,8 @@ describe('RsaModule', () => {
     expect(screen.getByTestId('rsa-formula-d')).toHaveTextContent('2753');
   });
 
-  it('shows the extended Euclid table row by row', () => {
-    render(<RsaModule />);
+  it('shows the extended Euclid table row by row', async () => {
+    await renderLoaded();
     for (let i = 0; i < 7; i += 1) next();
     const table = screen.getByRole('region', { name: 'Extended Euclid table' });
     // Rows 0 to 2 so far: the header plus three.
@@ -41,8 +53,8 @@ describe('RsaModule', () => {
     expect(within(table).getAllByRole('row')[3]).toHaveTextContent('-183');
   });
 
-  it('encrypts 65 to 2790 with square-and-multiply', () => {
-    render(<RsaModule />);
+  it('encrypts 65 to 2790 with square-and-multiply', async () => {
+    await renderLoaded();
     chapter('Encrypt');
     next();
     next();
@@ -54,10 +66,13 @@ describe('RsaModule', () => {
     expect(screen.getByTestId('rsa-encrypt-result')).toHaveTextContent('2790');
   });
 
-  it('gives prime feedback in free play and refuses a composite', () => {
-    render(<RsaModule />);
+  it('gives prime feedback in free play and refuses a composite', async () => {
+    await renderLoaded();
     fireEvent.click(screen.getByRole('button', { name: 'Free play' }));
-    fireEvent.change(screen.getByLabelText(/^Prime p/), { target: { value: '91' } });
+    // Free play's form is behind `next/dynamic`, so it appears a moment later.
+    fireEvent.change(await screen.findByLabelText(/^Prime p/), {
+      target: { value: '91' },
+    });
     expect(screen.getByTestId('rsa-p-feedback')).toHaveTextContent(
       'p = 91 is not prime: 7 × 13.',
     );
@@ -69,8 +84,8 @@ describe('RsaModule', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Public key (n, e) = (55, 17)');
   });
 
-  it('shows the three actors in the malleability chapter', () => {
-    render(<RsaModule />);
+  it('shows the three actors in the malleability chapter', async () => {
+    await renderLoaded();
     chapter('Malleability');
     for (let i = 0; i < 4; i += 1) next();
     const strip = screen.getByRole('list', { name: 'Sender, attacker and receiver' });
@@ -79,7 +94,7 @@ describe('RsaModule', () => {
   });
 
   it('is axe clean in every chapter', async () => {
-    const { container } = render(<RsaModule />);
+    const { container } = await renderLoaded();
     for (const name of ['Keys', 'Encrypt', 'Sign', 'Malleability']) {
       chapter(name);
       next();

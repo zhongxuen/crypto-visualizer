@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { CitationsProvider } from '@/components/inspector/CitationsContext';
+import type { CitationRegistry } from '@/core/citations/registry';
 import { cn } from '@/lib/cn';
 
 import { DisclaimerBanner } from './DisclaimerBanner';
@@ -15,6 +17,8 @@ export type ModuleMode = 'walkthrough' | 'free';
 export interface ModuleLayoutProps {
   title: string;
   intro: string;
+  /** The citations this module's steps cite: its own registry, not the whole site's. */
+  citations: CitationRegistry;
   mode?: ModuleMode;
   onModeChange?: (mode: ModuleMode) => void;
   /** Above the visual: inputs, chapter picker, lesson prose. */
@@ -69,6 +73,7 @@ export function ModeSwitch({
 export function ModuleLayout({
   title,
   intro,
+  citations,
   mode,
   onModeChange,
   controls,
@@ -78,42 +83,44 @@ export function ModuleLayout({
   className,
 }: ModuleLayoutProps) {
   return (
-    <div className={cn('flex flex-1 flex-col', className)}>
-      <main
-        id="main"
-        className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-6"
-      >
-        <header className="flex flex-wrap items-end justify-between gap-3">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-            <p className="text-fg-secondary">{intro}</p>
-          </div>
-          {mode && onModeChange ? (
-            <ModeSwitch mode={mode} onModeChange={onModeChange} />
-          ) : null}
-        </header>
-        <DisclaimerBanner />
-        {controls ? <div className="flex flex-col gap-3">{controls}</div> : null}
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <section aria-label="Visualization" className="flex min-w-0 flex-col gap-4">
-            {children}
-          </section>
-          {inspector ? (
-            <aside aria-label="Step inspector" className="flex min-w-0 flex-col gap-3">
-              {inspector}
-            </aside>
-          ) : null}
-        </div>
-      </main>
-      {timeline ? (
-        <div
-          role="region"
-          aria-label="Timeline"
-          className="border-border bg-surface/95 sticky bottom-0 z-10 border-t backdrop-blur"
+    <CitationsProvider citations={citations}>
+      <div className={cn('flex flex-1 flex-col', className)}>
+        <main
+          id="main"
+          className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-6"
         >
-          <div className="mx-auto max-w-6xl px-4 py-2">{timeline}</div>
-        </div>
-      ) : null}
-    </div>
+          <header className="flex flex-wrap items-end justify-between gap-3">
+            <div className="flex flex-col gap-1">
+              <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+              <p className="text-fg-secondary">{intro}</p>
+            </div>
+            {mode && onModeChange ? (
+              <ModeSwitch mode={mode} onModeChange={onModeChange} />
+            ) : null}
+          </header>
+          <DisclaimerBanner />
+          {controls ? <div className="flex flex-col gap-3">{controls}</div> : null}
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+            <section aria-label="Visualization" className="flex min-w-0 flex-col gap-4">
+              {children}
+            </section>
+            {inspector ? (
+              <aside aria-label="Step inspector" className="flex min-w-0 flex-col gap-3">
+                {inspector}
+              </aside>
+            ) : null}
+          </div>
+        </main>
+        {timeline ? (
+          <div
+            role="region"
+            aria-label="Timeline"
+            className="border-border bg-surface/95 sticky bottom-0 z-10 border-t backdrop-blur"
+          >
+            <div className="mx-auto max-w-6xl px-4 py-2">{timeline}</div>
+          </div>
+        ) : null}
+      </div>
+    </CitationsProvider>
   );
 }

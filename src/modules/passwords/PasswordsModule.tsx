@@ -7,7 +7,7 @@ import { HexBinToggle, useByteFormat } from '@/components/blocks';
 import { StepInspector } from '@/components/inspector';
 import { ChapterContext, ChapterTabs } from '@/components/lesson';
 import { ModuleLayout, type ModuleMode } from '@/components/shell';
-import { useProgress, useShareState } from '@/components/state';
+import { useDeferredImport, useProgress, useShareState } from '@/components/state';
 import {
   BUTTON,
   PhaseStepper,
@@ -22,15 +22,17 @@ import {
 } from '@/core/kdf/share';
 import type { PasswordsShareState } from '@/core/kdf/state';
 
-import { CostView } from './components/CostView';
-import { Pbkdf2View } from './components/Pbkdf2View';
 import { AttackerTable, tableStateAt, UsersTable } from './components/UsersView';
+import { PASSWORDS_PAGE_CITATIONS } from './citations';
 import { PASSWORDS_CHAPTER_LIST, PASSWORDS_META } from './meta';
-import { pbkdf2Inputs, passwordsRunFor } from './runs';
+import { EMPTY_RUN, tableRunFor } from './tableRun';
 import { usePbkdf2Worker } from './usePbkdf2Worker';
 
 type Input = PasswordsShareState['input'];
 const DEFAULTS = PASSWORDS_SHARE.defaults.input;
+
+/** PBKDF2's run, and the PBKDF2 and cost views, loaded right after hydration. */
+const loadRuns = () => import('./runs');
 
 function isDefaultInput(input: Input): boolean {
   return (Object.keys(DEFAULTS) as (keyof Input)[]).every(
@@ -60,18 +62,26 @@ export function PasswordsModule({ walkthrough }: { walkthrough?: ReactNode }) {
   const job = usePbkdf2Worker();
 
   const { exampleId, iterations } = state.input;
+  const runs = useDeferredImport(loadRuns);
+  const loading = chapter === 'pbkdf2' && runs === null;
   const result = useMemo(
-    () => passwordsRunFor(mode, state.input, state.seed, typed),
+    () =>
+      chapter !== 'pbkdf2'
+        ? tableRunFor(mode, state.input, state.seed, typed)
+        : runs
+          ? runs.passwordsRunFor(mode, state.input, state.seed, typed)
+          : EMPTY_RUN,
     // Only the inputs a run depends on; the cost sliders and step must not rebuild it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [mode, chapter, exampleId, iterations, state.seed, typed],
+    [mode, chapter, exampleId, iterations, state.seed, typed, runs],
   );
 
   const { reset } = job;
   useEffect(() => reset(), [result, reset]);
 
   const view = useRunView(result, {
-    initialStep: linked?.step,
+    // Held back until the run exists, or a link's step would land on an empty run.
+    initialStep: loading ? undefined : linked?.step,
     onStep: (step) =>
       setState((current) => (current.step === step ? current : { ...current, step })),
   });
@@ -93,7 +103,9 @@ export function PasswordsModule({ walkthrough }: { walkthrough?: ReactNode }) {
     setState((current) => ({ ...current, input: { ...current.input, ...patch } }));
 
   const startWorker = () => {
-    const params = pbkdf2Inputs(mode, state.input, typed);
+    // Only reachable from the PBKDF2 view, which renders from `runs`.
+    if (!runs) return;
+    const params = runs.pbkdf2Inputs(mode, state.input, typed);
     job.start({
       password: Array.from(params.password),
       salt: Array.from(params.salt),
@@ -108,6 +120,7 @@ export function PasswordsModule({ walkthrough }: { walkthrough?: ReactNode }) {
 
   return (
     <ModuleLayout
+      citations={PASSWORDS_PAGE_CITATIONS}
       title={PASSWORDS_META.title}
       intro={PASSWORDS_META.intro}
       mode={mode}
@@ -173,7 +186,13 @@ export function PasswordsModule({ walkthrough }: { walkthrough?: ReactNode }) {
         />
       ) : null}
 
-      {chapter === 'cost' ? <CostView input={state.input} onChange={setInput} /> : null}
+      {(chapter === 'cost' || chapter === 'pbkdf2') && !runs ? (
+        <p className="text-fg-muted">Loading this chapter…</p>
+      ) : null}
+
+      {chapter === 'cost' && runs ? (
+        <runs.CostView input={state.input} onChange={setInput} />
+      ) : null}
 
       {event && table && (chapter === 'lookup' || chapter === 'salt') ? (
         <div className="flex flex-col gap-4">
@@ -187,8 +206,8 @@ export function PasswordsModule({ walkthrough }: { walkthrough?: ReactNode }) {
         </div>
       ) : null}
 
-      {event && chapter === 'pbkdf2' ? (
-        <Pbkdf2View event={event} format={format} job={job} onStart={startWorker} />
+      {event && chapter === 'pbkdf2' && runs ? (
+        <runs.Pbkdf2View event={event} format={format} job={job} onStart={startWorker} />
       ) : null}
 
       {mode === 'walkthrough' && view.atEnd && !lastChapter ? (

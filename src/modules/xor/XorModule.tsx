@@ -20,6 +20,7 @@ import { MAX_TEXT_BYTES } from '@/core/xor/encode';
 import { XOR_SHARE, type XorChapter } from '@/core/xor/share';
 
 import { XorEventView } from './components/XorEventView';
+import { XOR_PAGE_CITATIONS } from './citations';
 import { XOR_CHAPTER_LIST, XOR_META } from './meta';
 import { xorRunFor } from './runs';
 
@@ -83,6 +84,7 @@ export function XorModule({ walkthrough }: { walkthrough?: ReactNode }) {
 
   return (
     <ModuleLayout
+      citations={XOR_PAGE_CITATIONS}
       title={XOR_META.title}
       intro={XOR_META.intro}
       mode={mode}

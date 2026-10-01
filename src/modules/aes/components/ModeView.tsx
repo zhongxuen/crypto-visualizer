@@ -6,24 +6,20 @@ import { memo, type ReactNode } from 'react';
 import { ByteGrid, type ByteFormat } from '@/components/blocks';
 import type {
   AesEvent,
-  AesMode,
   AesModeBlockEvent,
   AesModeResultEvent,
   AesPadEvent,
 } from '@/core/aes/events';
 import { cn } from '@/lib/cn';
 
+import { MODE_NAMES } from './modeNames';
 import { hex, Label } from './parts';
+
+export { MODE_NAMES } from './modeNames';
 
 const spaced = (bytes: ArrayLike<number>) => hex(bytes).replace(/(.{8})(?!$)/g, '$1 ');
 const printable = (bytes: readonly number[]) =>
   bytes.map((b) => (b >= 0x20 && b < 0x7f ? String.fromCharCode(b) : '·')).join('');
-
-export const MODE_NAMES: Record<AesMode, string> = {
-  ecb: 'ECB',
-  cbc: 'CBC',
-  ctr: 'CTR',
-};
 
 /** A box in a mode diagram: a name and a 16-byte value. */
 function Box({

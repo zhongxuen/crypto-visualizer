@@ -29,6 +29,7 @@ import {
 import { AvalancheView } from './components/AvalancheView';
 import { HmacView } from './components/HmacView';
 import { Sha256View } from './components/Sha256View';
+import { HASHING_PAGE_CITATIONS } from './citations';
 import { HASHING_CHAPTER_LIST, HASHING_META } from './meta';
 import { hashingRunFor, type HashingEvent } from './runs';
 
@@ -97,6 +98,7 @@ export function HashingModule({ walkthrough }: { walkthrough?: ReactNode }) {
 
   return (
     <ModuleLayout
+      citations={HASHING_PAGE_CITATIONS}
       title={HASHING_META.title}
       intro={HASHING_META.intro}
       mode={mode}

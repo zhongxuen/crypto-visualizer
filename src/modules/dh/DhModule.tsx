@@ -22,43 +22,16 @@ import { cn } from '@/lib/cn';
 
 import { buildBoard, shortNumber, type LaneId } from './board';
 import { Lanes } from './components/Lanes';
-import {
-  AgreeView,
-  InterceptView,
-  MitmFixView,
-  MitmKeysView,
-  MitmMessageView,
-  PaintEveView,
-  PaintLimitView,
-  PaintSharedView,
-  ParamsView,
-  PrivateView,
-  RealGroupsView,
-  ValidateView,
-  X25519View,
-} from './components/StepView';
+import { PaintEveView, PaintLimitView, PaintSharedView } from './components/PaintViews';
+import { DH_PAGE_CITATIONS } from './citations';
 import { DH_CHAPTER_LIST, DH_META } from './meta';
 import { paintRun } from './paintRun';
 
-// Not on the first screen (the paint scene, walkthrough mode), so they load when first
-// shown rather than in the route's first load (phase 10's 170 KB budget).
-const EveFoundView = dynamic(() =>
-  import('./components/EveView').then((m) => m.EveFoundView),
-);
-const EveGrowthView = dynamic(() =>
-  import('./components/EveView').then((m) => m.EveGrowthView),
-);
-const EveSearchView = dynamic(() =>
-  import('./components/EveView').then((m) => m.EveSearchView),
-);
+// Free play's inputs load when free play is first opened, not in the route's first load
+// (phase 10's 170 KB budget). Walkthrough views stay static: a view that suspends while
+// a learner steps through can swallow an arrow-key press.
 const FreePlayInputs = dynamic(() =>
   import('./components/Inputs').then((m) => m.FreePlayInputs),
-);
-const PowResultView = dynamic(() =>
-  import('./components/PowView').then((m) => m.PowResultView),
-);
-const PowStepView = dynamic(() =>
-  import('./components/PowView').then((m) => m.PowStepView),
 );
 
 type DhState = typeof DH_SHARE.defaults;
@@ -69,6 +42,7 @@ const EMPTY_RUN = createRun<DhEvent>().finish();
 
 /** Every scene's run builder, loaded right after hydration (paint's is static). */
 const loadRuns = () => import('./runs');
+type Runs = Awaited<ReturnType<typeof loadRuns>>;
 
 const THREE_LANES: readonly LaneId[] = ['alice', 'public', 'bob'];
 const WITH_EVE: readonly LaneId[] = ['alice', 'public', 'bob', 'eve'];
@@ -87,16 +61,19 @@ function isDefaultInput(state: DhState): boolean {
 }
 
 /** The picture for one step, below the lanes. */
+/** The picture for one step: paint's views are static, the other scenes' come with `runs`. */
 function StepPicture({
   event,
   events,
   index,
   groupName,
+  runs,
 }: {
   event: DhEvent;
   events: readonly DhEvent[];
   index: number;
   groupName?: string;
+  runs: Runs | null;
 }) {
   switch (event.kind) {
     case 'dh.paintShared':
@@ -105,40 +82,15 @@ function StepPicture({
       return <PaintEveView event={event} />;
     case 'dh.paintLimit':
       return <PaintLimitView />;
-    case 'dh.params':
-      return <ParamsView event={event} />;
-    case 'dh.private':
-      return <PrivateView event={event} />;
-    case 'dh.powStep':
-      return <PowStepView event={event} />;
-    case 'dh.publicKey':
-    case 'dh.shared':
-      return <PowResultView event={event} />;
-    case 'dh.validate':
-      return <ValidateView event={event} />;
-    case 'dh.agree':
-      return <AgreeView event={event} />;
-    case 'dh.realGroups':
-      return <RealGroupsView event={event} />;
-    case 'dh.x25519':
-      return <X25519View />;
-    case 'dh.eveTry':
-    case 'dh.eveSkip':
-      return <EveSearchView events={events} index={index} />;
-    case 'dh.eveFound':
-      return <EveFoundView event={event} />;
-    case 'dh.eveGrowth':
-      return <EveGrowthView event={event} groupName={groupName} />;
-    case 'dh.mitmIntercept':
-      return <InterceptView event={event} />;
-    case 'dh.mitmKeys':
-      return <MitmKeysView event={event} />;
-    case 'dh.mitmMessage':
-      return <MitmMessageView event={event} />;
-    case 'dh.mitmFix':
-      return <MitmFixView />;
     default:
-      return null;
+      return runs ? (
+        <runs.ScenePicture
+          event={event}
+          events={events}
+          index={index}
+          groupName={groupName}
+        />
+      ) : null;
   }
 }
 
@@ -234,6 +186,7 @@ export function DhModule({ walkthrough }: { walkthrough?: ReactNode }) {
 
   return (
     <ModuleLayout
+      citations={DH_PAGE_CITATIONS}
       title={DH_META.title}
       intro={DH_META.intro}
       mode={mode}
@@ -347,6 +300,7 @@ export function DhModule({ walkthrough }: { walkthrough?: ReactNode }) {
             events={events}
             index={view.index}
             groupName={groupName}
+            runs={runs}
           />
         </>
       )}

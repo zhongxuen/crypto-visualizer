@@ -12,6 +12,7 @@ import {
 } from '@/components/blocks';
 import { StepInspector } from '@/components/inspector';
 import { ModuleLayout, type ModuleMode } from '@/components/shell';
+import { CITATIONS } from '@/core/citations';
 import {
   PhaseStepper,
   StepCaption,
@@ -39,6 +40,7 @@ export function DemoView() {
 
   return (
     <ModuleLayout
+      citations={CITATIONS}
       title="Building blocks"
       intro="Every shared component, driven by a fake run. Keyboard only works end to end."
       mode={mode}
