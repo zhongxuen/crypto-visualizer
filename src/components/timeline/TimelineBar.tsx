@@ -28,6 +28,7 @@ export function TimelineBar({ store, result, className }: TimelineBarProps) {
     <PlaybackControls
       status={status}
       speed={speed}
+      atStart={index <= 0}
       atEnd={count > 0 && index === count - 1}
       onCommand={(command) => store.getState().run(command)}
       className={cn(className)}

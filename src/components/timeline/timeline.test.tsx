@@ -148,6 +148,47 @@ describe('TimelineBar and keys', () => {
     expect(status).toHaveTextContent('First');
   });
 
+  it('marks the buttons that cannot move as aria-disabled, but keeps them focusable', () => {
+    render(<Harness />);
+    const status = screen.getByRole('status');
+    const back = screen.getByRole('button', { name: 'Back' });
+    const previous = screen.getByRole('button', { name: 'Previous group' });
+    const next = screen.getByRole('button', { name: 'Next' });
+    const nextGroup = screen.getByRole('button', { name: 'Next group' });
+
+    // Step 0: Back and ⏮ are inert; Next and ⏭ are live.
+    for (const button of [back, previous]) {
+      expect(button).toHaveAttribute('aria-disabled', 'true');
+      expect(button).not.toBeDisabled();
+      button.focus();
+      expect(button).toHaveFocus();
+    }
+    for (const button of [next, nextGroup]) {
+      expect(button).not.toHaveAttribute('aria-disabled');
+    }
+    fireEvent.click(back);
+    fireEvent.click(previous);
+    expect(status).toHaveTextContent('Step 1 of 4');
+
+    // The last step: the other way round.
+    act(() => {
+      fireEvent.keyDown(window, { key: 'End' });
+    });
+    expect(status).toHaveTextContent('Fourth');
+    for (const button of [next, nextGroup]) {
+      expect(button).toHaveAttribute('aria-disabled', 'true');
+      expect(button).not.toBeDisabled();
+      button.focus();
+      expect(button).toHaveFocus();
+    }
+    for (const button of [back, previous]) {
+      expect(button).not.toHaveAttribute('aria-disabled');
+    }
+    fireEvent.click(next);
+    fireEvent.click(nextGroup);
+    expect(status).toHaveTextContent('Fourth');
+  });
+
   it('is axe clean', async () => {
     const { container } = render(<Harness />);
     await expectNoAxeViolations(container);

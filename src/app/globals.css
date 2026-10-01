@@ -109,3 +109,39 @@ body {
 .prose-cv strong {
   font-weight: 600;
 }
+
+/* Tables in walkthroughs. Numeric columns are right-aligned in the MDX itself (GFM
+   `---:`, which renders as an inline `text-align`), so the default here is start. */
+.prose-cv .table-scroll {
+  margin-block: 1rem;
+  max-width: 100%;
+}
+.prose-cv table {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+.prose-cv th,
+.prose-cv td {
+  padding: 0.375rem 0.75rem;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: var(--border);
+  text-align: start;
+  white-space: nowrap;
+}
+.prose-cv th {
+  font-weight: 600;
+  border-bottom-color: var(--border-strong);
+  color: var(--fg-secondary);
+}
+.prose-cv tbody tr:last-child td {
+  border-bottom-style: none;
+}
+/* Below 640px a wide table scrolls on its own rather than widening the page. */
+@media (max-width: 639.98px) {
+  .prose-cv .table-scroll {
+    overflow-x: auto;
+  }
+}

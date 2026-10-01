@@ -20,6 +20,9 @@ import type { PlaybackCommand } from './keymap';
 /**
  * The transport bar's buttons.
  *
+ * At the ends of the run, the buttons that can't move further are `aria-disabled` and
+ * dimmed rather than `disabled`, so they keep keyboard focus and stay in the tab order.
+ *
  * ADAPTED from Internet Visualizer `src/components/viz/PlaybackControls.tsx` at 59ae4ad
  * (see VENDORED.md). Kept: every button emits the same `PlaybackCommand` the keyboard
  * map produces, so a shortcut that works is a button that works; the play button's
@@ -31,6 +34,8 @@ export interface PlaybackControlsProps {
   status: PlaybackStatus;
   speed: number;
   onCommand: (command: PlaybackCommand) => void;
+  /** Whether the playhead is on the first step (Back and Previous group do nothing). */
+  atStart?: boolean;
   /** Whether the playhead is on the last step (Play then restarts). */
   atEnd?: boolean;
   children?: ReactNode;
@@ -47,23 +52,26 @@ export function playbackAction(
 }
 
 export const BUTTON =
-  'inline-flex min-h-target-floor items-center justify-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-fg hover:bg-surface-overlay focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-50';
+  'inline-flex min-h-target-floor items-center justify-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-fg hover:bg-surface-overlay focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:bg-surface';
 
 function IconButton({
   icon: Icon,
   label,
   shortcut,
+  inert = false,
   onClick,
 }: {
   icon: LucideIcon;
   label: string;
   shortcut: string;
+  inert?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={inert ? undefined : onClick}
+      aria-disabled={inert || undefined}
       aria-label={label}
       title={`${label} (${shortcut})`}
       className={cn(BUTTON, 'size-9 px-0')}
@@ -77,6 +85,7 @@ export function PlaybackControls({
   status,
   speed,
   onCommand,
+  atStart = false,
   atEnd = false,
   children,
   className,
@@ -91,11 +100,15 @@ export function PlaybackControls({
           icon={ChevronsLeft}
           label="Previous group"
           shortcut="Shift+Left arrow"
+          inert={atStart}
           onClick={() => onCommand({ type: 'step-phase', direction: -1 })}
         />
         <button
           type="button"
-          onClick={() => onCommand({ type: 'step-event', direction: -1 })}
+          onClick={
+            atStart ? undefined : () => onCommand({ type: 'step-event', direction: -1 })
+          }
+          aria-disabled={atStart || undefined}
           title="Back one step (Left arrow)"
           className={BUTTON}
         >
@@ -121,7 +134,10 @@ export function PlaybackControls({
         </button>
         <button
           type="button"
-          onClick={() => onCommand({ type: 'step-event', direction: 1 })}
+          onClick={
+            atEnd ? undefined : () => onCommand({ type: 'step-event', direction: 1 })
+          }
+          aria-disabled={atEnd || undefined}
           title="Next step (Right arrow)"
           className={BUTTON}
         >
@@ -132,6 +148,7 @@ export function PlaybackControls({
           icon={ChevronsRight}
           label="Next group"
           shortcut="Shift+Right arrow"
+          inert={atEnd}
           onClick={() => onCommand({ type: 'step-phase', direction: 1 })}
         />
       </div>

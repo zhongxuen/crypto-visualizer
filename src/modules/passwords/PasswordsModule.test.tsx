@@ -65,7 +65,8 @@ describe('PasswordsModule privacy', () => {
     expect(window.location.search).toContain(`${SHARE_PARAM}=`);
     expect(stored).not.toContain(SECRET);
     expect(stored).not.toContain('Tr0ub4dor');
-  });
+    // About 3.5 s alone (three chapters, two lazy imports); over 5 s in a loaded run.
+  }, 30_000);
 
   it('is axe clean in free play', async () => {
     vi.useRealTimers();
