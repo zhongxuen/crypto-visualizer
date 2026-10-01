@@ -18,7 +18,7 @@ import {
 import type { AesAvalancheEvent, AesEvent, AesModeBlockEvent } from '@/core/aes/events';
 import { MAX_MODE_BYTES } from '@/core/aes/modes/common';
 import { penguinImages } from '@/core/aes/penguin';
-import { AES_MODES, AES_SHARE_STATE, type AesChapter } from '@/core/aes/state';
+import { AES_MODES, AES_SHARE, type AesChapter } from '@/core/aes/share';
 import { bytesToHex, hexToBytes } from '@/core/bytes/hex';
 import { utf8Decode, utf8Encode } from '@/core/bytes/utf8';
 import { createRun } from '@/core/events/builder';
@@ -33,10 +33,10 @@ import { PenguinView } from './components/PenguinView';
 import { AES_CHAPTER_LIST, AES_META } from './meta';
 import { aesInputs, aesRunFor, inputProblem } from './runs';
 
-type AesState = typeof AES_SHARE_STATE.defaults;
+type AesState = typeof AES_SHARE.defaults;
 type AesInput = AesState['input'];
 
-const DEFAULTS = AES_SHARE_STATE.defaults;
+const DEFAULTS = AES_SHARE.defaults;
 const EMPTY_RUN = createRun<AesEvent>().finish();
 
 function isDefaultInput(state: AesState): boolean {
@@ -54,7 +54,7 @@ function isDefaultInput(state: AesState): boolean {
  * step's view is rendered.
  */
 export function AesModule({ walkthrough }: { walkthrough?: ReactNode }) {
-  const share = useShareState(AES_SHARE_STATE);
+  const share = useShareState(AES_SHARE);
   const { state, setState, linked } = share;
   const [modeChoice, setModeChoice] = useState<ModuleMode | null>(null);
   const mode: ModuleMode =

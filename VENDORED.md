@@ -81,3 +81,15 @@ verbatim. Every file carries a header saying what changed.
 
 Not taken: `frameClock.ts`, `time.ts`, `KeyboardLegend.tsx` and everything canvas- or
 packet-related.
+
+## Internet Visualizer bundle measurement
+
+- **Source:** https://github.com/zhongxuen/internet-visualizer, `perf/bundles.mjs`
+- **Commit:** `dd615cd`
+- **Why:** Next 16 prints no per-route size table; this reads each prerendered route's
+  script and preload tags and sums the gzipped chunks, the same way both projects state
+  their budgets.
+
+| File here | Upstream file | Status |
+| --- | --- | --- |
+| `perf/bundles.mjs` | `perf/bundles.mjs` | **Adapted.** The measurement is unchanged; the header comment is local, and the end enforces phase 10's 170 KB budget on every folder in `src/app/(modules)` and exits 1 when a route is over or missing. |

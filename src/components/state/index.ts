@@ -14,4 +14,5 @@ export {
   writeProgress,
   type UseProgress,
 } from './useProgress';
+export { useDeferredImport } from './useDeferredImport';
 export { useShareState, type UseShareState } from './useShareState';

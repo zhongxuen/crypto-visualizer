@@ -8,6 +8,9 @@ import { DH_DEFAULT_INPUT, DH_MITM_INPUT } from '@/core/dh/scenarios';
 import type { DhScene, DhShareState } from '@/core/dh/state';
 import type { SimResult } from '@/core/sim/result';
 
+/** Re-exported for the page, which loads this file after hydration (`useDeferredImport`). */
+export { getGroup, isGroupId } from '@/core/dh/params';
+
 type Mode = 'walkthrough' | 'free';
 
 /**

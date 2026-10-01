@@ -46,7 +46,8 @@ describe('against node:crypto', () => {
       );
     }
     expect(multiBlock).toBeGreaterThan(50);
-  });
+    // About 200,000 HMAC calls: ~2 s plain, over 5 s under coverage instrumentation.
+  }, 60_000);
 
   it('handles a key of several blocks with a partial last block', () => {
     const p = utf8Encode('pw');

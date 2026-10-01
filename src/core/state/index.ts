@@ -30,6 +30,7 @@ export {
   findSecretKeys,
   SEED_SCHEMA,
   STEP_SCHEMA,
+  type LazyShareState,
   type ModuleShareState,
   type ShareStateBase,
 } from './schema';

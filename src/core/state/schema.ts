@@ -18,13 +18,25 @@
  * password field can't be defined, encoded or decoded.
  */
 
-import { z } from 'zod';
+// `zod/mini` rather than `zod`: the same validators behind a functional API that the
+// bundler can tree-shake. Classic zod put ~90 KB gzipped (every locale included) in the
+// first load of every module route, over half the 170 KB budget (phase 10, step 3).
+import * as z from 'zod/mini';
+
+import { findSecretKeys } from './secrets';
+
+export { findSecretKeys } from './secrets';
+
+/** A whole number in `[min, max]`. */
+export function intBetween(min: number, max: number) {
+  return z.int().check(z.gte(min), z.lte(max));
+}
 
 /** A 32-bit unsigned seed, as `createRng` reduces it to. */
-export const SEED_SCHEMA = z.number().int().min(0).max(0xffffffff);
+export const SEED_SCHEMA = intBetween(0, 0xffffffff);
 
 /** The step on screen. Clamped to the run's length by the page, not here. */
-export const STEP_SCHEMA = z.number().int().min(0).max(100_000);
+export const STEP_SCHEMA = intBetween(0, 100_000);
 
 export interface ShareStateBase<M extends string = string, I = unknown> {
   /** Module slug, as in `src/modules/registry.ts`. */
@@ -40,28 +52,25 @@ export interface ShareStateBase<M extends string = string, I = unknown> {
 export interface ModuleShareState<S extends ShareStateBase = ShareStateBase> {
   readonly m: S['m'];
   readonly v: number;
-  readonly schema: z.ZodType<S>;
+  readonly schema: z.ZodMiniType<S>;
   /** What a missing, invalid or oversized link decodes to. */
   readonly defaults: S;
 }
 
-/** Keys that look like a free-text secret. Matched case-insensitively, anywhere in a key. */
-const SECRET_KEY = /password|passphrase|passwd|secret/i;
-
-/** Paths of keys in `value` that look like free-text secrets, e.g. `['input.password']`. */
-export function findSecretKeys(value: unknown, path = ''): string[] {
-  if (Array.isArray(value)) {
-    return value.flatMap((item, index) => findSecretKeys(item, `${path}[${index}]`));
-  }
-  if (value === null || typeof value !== 'object') return [];
-
-  return Object.entries(value).flatMap(([key, child]) => {
-    const childPath = path ? `${path}.${key}` : key;
-    return [
-      ...(SECRET_KEY.test(key) ? [childPath] : []),
-      ...findSecretKeys(child, childPath),
-    ];
-  });
+/**
+ * A module's share state as the page first loads it: everything but the validator.
+ *
+ * The schema is only needed once a link is read or written, which happens after
+ * hydration, so `load()` imports it then. That keeps zod out of every module route's
+ * first-load JS (phase 10's 170 KB budget). Each algorithm exports one from its
+ * zod-free `src/core/<algo>/share.ts`; `src/core/state/lazy.test.ts` checks that its
+ * `m`, `v` and `defaults` are the full definition's and that `load()` resolves to it.
+ */
+export interface LazyShareState<S extends ShareStateBase = ShareStateBase> {
+  readonly m: S['m'];
+  readonly v: number;
+  readonly defaults: S;
+  load(): Promise<ModuleShareState<S>>;
 }
 
 /**
@@ -70,7 +79,7 @@ export function findSecretKeys(value: unknown, path = ''): string[] {
  * Throws if `defaults` don't satisfy the schema, or if they contain a key that looks
  * like a password field. Both are authoring mistakes, caught when the module loads.
  */
-export function defineShareState<const M extends string, I extends z.ZodType>(spec: {
+export function defineShareState<const M extends string, I extends z.ZodMiniType>(spec: {
   m: M;
   v: number;
   input: I;
@@ -84,7 +93,7 @@ export function defineShareState<const M extends string, I extends z.ZodType>(sp
     seed: SEED_SCHEMA,
     step: STEP_SCHEMA,
     input: spec.input,
-  }) as unknown as z.ZodType<State>;
+  }) as unknown as z.ZodMiniType<State>;
 
   const defaults: State = { m: spec.m, v: spec.v, ...spec.defaults };
 

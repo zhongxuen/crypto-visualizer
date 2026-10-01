@@ -15,7 +15,8 @@
 
 import { base64urlDecode, base64urlEncode } from '../bytes/base64url';
 import { utf8Decode, utf8Encode } from '../bytes/utf8';
-import { findSecretKeys, type ModuleShareState, type ShareStateBase } from './schema';
+import type { ModuleShareState, ShareStateBase } from './schema';
+import { findSecretKeys } from './secrets';
 
 /** The query parameter that carries the state. */
 export const SHARE_PARAM = 's';

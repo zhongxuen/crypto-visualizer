@@ -16,11 +16,11 @@ import {
   useRunView,
 } from '@/components/timeline';
 import {
-  PASSWORDS_SHARE_STATE,
+  PASSWORDS_SHARE,
   PBKDF2_EXAMPLES,
   type PasswordsChapter,
-  type PasswordsShareState,
-} from '@/core/kdf/state';
+} from '@/core/kdf/share';
+import type { PasswordsShareState } from '@/core/kdf/state';
 
 import { CostView } from './components/CostView';
 import { Pbkdf2View } from './components/Pbkdf2View';
@@ -30,7 +30,7 @@ import { pbkdf2Inputs, passwordsRunFor } from './runs';
 import { usePbkdf2Worker } from './usePbkdf2Worker';
 
 type Input = PasswordsShareState['input'];
-const DEFAULTS = PASSWORDS_SHARE_STATE.defaults.input;
+const DEFAULTS = PASSWORDS_SHARE.defaults.input;
 
 function isDefaultInput(input: Input): boolean {
   return (Object.keys(DEFAULTS) as (keyof Input)[]).every(
@@ -48,7 +48,7 @@ function isDefaultInput(input: Input): boolean {
  * `PasswordsModule.test.tsx` checks both.
  */
 export function PasswordsModule({ walkthrough }: { walkthrough?: ReactNode }) {
-  const share = useShareState(PASSWORDS_SHARE_STATE);
+  const share = useShareState(PASSWORDS_SHARE);
   const { state, setState, linked } = share;
   const [modeChoice, setModeChoice] = useState<ModuleMode | null>(null);
   const mode: ModuleMode =

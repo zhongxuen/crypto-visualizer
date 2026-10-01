@@ -2,6 +2,9 @@
   "name": "crypto-visualizer",
   "version": "0.1.0",
   "private": true,
+  "sideEffects": [
+    "*.css"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -14,7 +17,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "verify": "npm run lint && npm run typecheck && npm run test && npm run build"
+    "verify": "npm run lint && npm run typecheck && npm run test:coverage && npm run build && npm run perf:bundles",
+    "perf:bundles": "node perf/bundles.mjs"
   },
   "dependencies": {
     "@mdx-js/loader": "^3.1.1",

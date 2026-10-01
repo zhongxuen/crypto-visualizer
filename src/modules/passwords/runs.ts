@@ -7,7 +7,8 @@ import {
   pbkdf2Run,
   STEPPED_ITERATIONS,
 } from '@/core/kdf/pbkdf2';
-import { PBKDF2_EXAMPLES, type PasswordsShareState } from '@/core/kdf/state';
+import { PBKDF2_EXAMPLES } from '@/core/kdf/share';
+import type { PasswordsShareState } from '@/core/kdf/state';
 import type { SimResult } from '@/core/sim/result';
 
 export const EMPTY_RUN: SimResult<KdfEvent> = createRun<KdfEvent>().finish();

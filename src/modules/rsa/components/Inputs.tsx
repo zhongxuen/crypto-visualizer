@@ -6,12 +6,8 @@ import { utf8Encode } from '@/core/bytes/utf8';
 import { primeProblem, REALISTIC_BITS } from '@/core/rsa/keygen';
 import { trialDivision } from '@/core/rsa/primes';
 import { MAX_SIGN_TEXT_BYTES } from '@/core/rsa/sign';
-import {
-  MAX_MESSAGE_DIGITS,
-  RSA_MODES,
-  type RsaChapter,
-  type RsaShareState,
-} from '@/core/rsa/state';
+import { MAX_MESSAGE_DIGITS, RSA_MODES, type RsaChapter } from '@/core/rsa/share';
+import type { RsaShareState } from '@/core/rsa/state';
 import { cn } from '@/lib/cn';
 
 type Input = RsaShareState['input'];

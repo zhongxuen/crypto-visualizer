@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { expectNoAxeViolations } from '@/components/testing/axe';
+import { PASSWORDS_SHARE } from '@/core/kdf/share';
 import { SHARE_PARAM } from '@/core/state';
 
 import { PasswordsModule } from './PasswordsModule';
@@ -32,8 +33,12 @@ describe('PasswordsModule privacy', () => {
   });
   afterEach(() => vi.useRealTimers());
 
-  it('never puts a typed password in the URL or in storage', () => {
+  it('never puts a typed password in the URL or in storage', async () => {
     render(<PasswordsModule />);
+    // The share-state schema is a dynamic import; wait for it so the link is written.
+    await act(async () => {
+      await PASSWORDS_SHARE.load();
+    });
     act(() => {
       vi.advanceTimersByTime(500);
     });

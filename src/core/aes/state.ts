@@ -1,26 +1,28 @@
-import { z } from 'zod';
+import * as z from 'zod/mini';
 
-import { defineShareState } from '../state/schema';
+import { defineShareState, intBetween, type ShareStateBase } from '../state/schema';
 import { MAX_MODE_BYTES } from './modes/common';
-import { AES_DEFAULT_SEED, AES_EXAMPLES } from './scenarios';
+import { AES_CHAPTERS, AES_MODES, AES_SHARE } from './share';
 
-export const AES_CHAPTERS = [
-  'block',
-  'keys',
-  'avalanche',
-  'modes',
-  'penguin',
-  'gcm',
-] as const;
-export type AesChapter = (typeof AES_CHAPTERS)[number];
-
-export const AES_MODES = ['ecb', 'cbc', 'ctr'] as const;
+export { AES_CHAPTERS, AES_MODES, AES_SHARE, type AesChapter } from './share';
 
 const hex = (maxBytes: number) =>
   z
     .string()
-    .regex(/^(?:[0-9a-f]{2})*$/, 'Lowercase hex, whole bytes')
-    .max(2 * maxBytes);
+    .check(
+      z.regex(/^(?:[0-9a-f]{2})*$/, 'Lowercase hex, whole bytes'),
+      z.maxLength(2 * maxBytes),
+    );
+
+const AES_INPUT = z.object({
+  chapter: z.enum(AES_CHAPTERS),
+  mode: z.enum(AES_MODES),
+  keyHex: z.optional(hex(16).check(z.length(32))),
+  ptHex: z.optional(hex(MAX_MODE_BYTES)),
+  bit: intBetween(0, 127),
+});
+
+export type AesShareState = ShareStateBase<'aes', z.output<typeof AES_INPUT>>;
 
 /**
  * `?s=` for /aes. The key is shared as hex: the keys here are for display only (the UI
@@ -28,26 +30,8 @@ const hex = (maxBytes: number) =>
  * message; `bit` is the avalanche bit.
  */
 export const AES_SHARE_STATE = defineShareState({
-  m: 'aes',
-  v: 1,
-  input: z.object({
-    chapter: z.enum(AES_CHAPTERS),
-    mode: z.enum(AES_MODES),
-    keyHex: hex(16).length(32).optional(),
-    ptHex: hex(MAX_MODE_BYTES).optional(),
-    bit: z.number().int().min(0).max(127),
-  }),
-  defaults: {
-    seed: AES_DEFAULT_SEED,
-    step: 0,
-    input: {
-      chapter: 'block',
-      mode: 'ecb',
-      keyHex: AES_EXAMPLES.appendixB.keyHex,
-      ptHex: AES_EXAMPLES.appendixB.ptHex,
-      bit: 0,
-    },
-  },
+  m: AES_SHARE.m,
+  v: AES_SHARE.v,
+  input: AES_INPUT,
+  defaults: AES_SHARE.defaults,
 });
-
-export type AesShareState = typeof AES_SHARE_STATE.defaults;

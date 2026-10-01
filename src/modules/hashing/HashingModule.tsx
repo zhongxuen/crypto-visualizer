@@ -21,10 +21,10 @@ import type { Sha256Event } from '@/core/sha256/events';
 import { createRun } from '@/core/events/builder';
 import { MAX_STEPPED_BYTES } from '@/core/sha256/sha256';
 import {
-  HASHING_SHARE_STATE,
+  HASHING_SHARE,
   MAX_HMAC_KEY_BYTES,
   type HashingChapter,
-} from '@/core/sha256/state';
+} from '@/core/sha256/share';
 
 import { AvalancheView } from './components/AvalancheView';
 import { HmacView } from './components/HmacView';
@@ -32,7 +32,7 @@ import { Sha256View } from './components/Sha256View';
 import { HASHING_CHAPTER_LIST, HASHING_META } from './meta';
 import { hashingRunFor, type HashingEvent } from './runs';
 
-const DEFAULTS = HASHING_SHARE_STATE.defaults.input;
+const DEFAULTS = HASHING_SHARE.defaults.input;
 const EMPTY_RUN = createRun<HashingEvent>().finish();
 
 function isDefaultInput(input: typeof DEFAULTS): boolean {
@@ -49,7 +49,7 @@ function isDefaultInput(input: typeof DEFAULTS): boolean {
  * rounds stays smooth.
  */
 export function HashingModule({ walkthrough }: { walkthrough?: ReactNode }) {
-  const share = useShareState(HASHING_SHARE_STATE);
+  const share = useShareState(HASHING_SHARE);
   const { state, setState, linked } = share;
   const [modeChoice, setModeChoice] = useState<ModuleMode | null>(null);
   const mode: ModuleMode =

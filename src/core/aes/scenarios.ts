@@ -7,27 +7,9 @@ import { ctrRun } from './modes/ctr';
 import { ecbRun } from './modes/ecb';
 import { gcmExplanationRun } from './modes/gcm';
 import { penguinRun } from './penguin';
+import { AES_DEFAULT_SEED, AES_EXAMPLES } from './examples';
 
-/**
- * The built-in examples. `appendixB` is FIPS 197 Appendix B (whose key is the one
- * expanded in Appendix A.1); `c1` is Appendix C.1 of the 2001 edition, now kept in NIST's
- * "examples with intermediate values".
- */
-export const AES_EXAMPLES = {
-  appendixB: {
-    keyHex: '2b7e151628aed2a6abf7158809cf4f3c',
-    ptHex: '3243f6a8885a308d313198a2e0370734',
-  },
-  c1: {
-    keyHex: '000102030405060708090a0b0c0d0e0f',
-    ptHex: '00112233445566778899aabbccddeeff',
-  },
-  /** Two equal 16-byte blocks, so ECB's repeat shows. */
-  modesText: 'ATTACK AT DAWN!!ATTACK AT DAWN!!Retreat at dusk.',
-} as const;
-
-/** The default seed for IVs and nonces in the built-in runs. */
-export const AES_DEFAULT_SEED = 7;
+export { AES_DEFAULT_SEED, AES_EXAMPLES } from './examples';
 
 const key = () => hexToBytes(AES_EXAMPLES.appendixB.keyHex);
 const modesText = () => utf8Encode(AES_EXAMPLES.modesText);

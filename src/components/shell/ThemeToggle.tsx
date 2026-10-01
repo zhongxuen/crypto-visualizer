@@ -3,7 +3,8 @@
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { useEffect } from 'react';
 
-import { useProgress, type ThemePref } from '@/components/state';
+import { type ThemePref } from '@/components/state/progress';
+import { useProgress } from '@/components/state/useProgress';
 import { cn } from '@/lib/cn';
 
 /**

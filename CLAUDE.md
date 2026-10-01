@@ -75,6 +75,15 @@ Other fixed rules:
 - Each run step gets `STEP_MS` of virtual time (`createRun` in `src/core/events`), and
   `group(...)` calls become the phases the stepper moves between.
 - The mulberry32 rng is not cryptographic. Keys are for display only, and the UI says so.
+- `/demo` stays, as the test bed for the shared building blocks (`e2e/demo.spec.ts` drives
+  the timeline and byte grid there in isolation). It is `noindex, nofollow`, linked from
+  nowhere, and must be left out of the sitemap. It is not held to the module JS budget.
+- A module page holds its share state as a zod-free `LazyShareState` from
+  `src/core/<algo>/share.ts`; the zod schema in `state.ts` loads only when a link is read.
+  Import runtime values from `share.ts`, never from `state.ts`, or zod lands back in the
+  route's first-load JS.
+- `npm run verify` enforces the 95% `src/core` coverage floor and, through
+  `perf/bundles.mjs`, 170 KB of gzipped first-load JS per module route.
 
 ## Rules for parallel agents (00-overview §4)
 

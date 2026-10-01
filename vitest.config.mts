@@ -42,6 +42,11 @@ export default defineConfig({
       include: ['src/core/**/*.ts', 'src/lib/**/*.ts'],
       exclude: ['**/*.test.*', '**/index.ts'],
       reportOnFailure: true,
+      // Phase 10 step 3: core is where the maths lives, so it carries the bar. `npm run
+      // verify` runs with coverage, so dropping below this fails it.
+      thresholds: {
+        'src/core/**': { statements: 95, branches: 95, functions: 95, lines: 95 },
+      },
     },
   },
 });

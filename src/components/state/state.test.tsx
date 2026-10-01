@@ -1,8 +1,13 @@
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { z } from 'zod';
+import * as z from 'zod/mini';
 
-import { defineShareState, SHARE_PARAM, shareStateFromSearch } from '@/core/state';
+import {
+  defineShareState,
+  SHARE_PARAM,
+  shareStateFromSearch,
+  type LazyShareState,
+} from '@/core/state';
 
 import { migrateProgress, parseProgress, PROGRESS_KEY } from './progress';
 import { useProgress } from './useProgress';
@@ -74,9 +79,19 @@ describe('useShareState', () => {
   const DEF = defineShareState({
     m: 'demo',
     v: 1,
-    input: z.object({ text: z.string().max(100) }),
+    input: z.object({ text: z.string().check(z.maxLength(100)) }),
     defaults: { seed: 1, step: 0, input: { text: 'hi' } },
   });
+  // What a module passes: the schema arrives through `load()`, as a dynamic import would.
+  const LAZY: LazyShareState<typeof DEF.defaults> = {
+    m: DEF.m,
+    v: DEF.v,
+    defaults: DEF.defaults,
+    load: () => Promise.resolve(DEF),
+  };
+
+  /** Let `load()` resolve and its state updates render. */
+  const loaded = () => act(async () => {});
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -85,7 +100,7 @@ describe('useShareState', () => {
   afterEach(() => vi.useRealTimers());
 
   function Probe() {
-    const { state, setState, ready } = useShareState(DEF);
+    const { state, setState, ready } = useShareState(LAZY);
     return (
       <>
         <p>
@@ -101,7 +116,15 @@ describe('useShareState', () => {
     );
   }
 
-  it('reads the link after hydration', () => {
+  it('renders the defaults until the schema has loaded', async () => {
+    window.history.replaceState(null, '', `/demo?${SHARE_PARAM}=anything`);
+    render(<Probe />);
+    expect(screen.getByText('loading:hi:0')).toBeInTheDocument();
+    await loaded();
+    expect(screen.getByText('ready:hi:0')).toBeInTheDocument();
+  });
+
+  it('reads the link after hydration', async () => {
     const search = `?${SHARE_PARAM}=${btoa(
       JSON.stringify({ ...DEF.defaults, step: 7, input: { text: 'yo' } }),
     )
@@ -110,18 +133,21 @@ describe('useShareState', () => {
       .replace(/\//g, '_')}`;
     window.history.replaceState(null, '', `/demo${search}`);
     render(<Probe />);
+    await loaded();
     expect(screen.getByText('ready:yo:7')).toBeInTheDocument();
   });
 
-  it('falls back to the defaults for a bad link', () => {
+  it('falls back to the defaults for a bad link', async () => {
     window.history.replaceState(null, '', '/demo?s=garbage!!');
     render(<Probe />);
+    await loaded();
     expect(screen.getByText('ready:hi:0')).toBeInTheDocument();
   });
 
-  it('writes back with replaceState, debounced, without adding history', () => {
+  it('writes back with replaceState, debounced, without adding history', async () => {
     const lengthBefore = window.history.length;
     render(<Probe />);
+    await loaded();
     fireEvent.click(screen.getByRole('button'));
     fireEvent.click(screen.getByRole('button'));
     expect(window.location.search).toBe('');

@@ -17,13 +17,13 @@ import {
 } from '@/components/timeline';
 import { utf8Encode } from '@/core/bytes/utf8';
 import { MAX_TEXT_BYTES } from '@/core/xor/encode';
-import { XOR_SHARE_STATE, type XorChapter } from '@/core/xor/state';
+import { XOR_SHARE, type XorChapter } from '@/core/xor/share';
 
 import { XorEventView } from './components/XorEventView';
 import { XOR_CHAPTER_LIST, XOR_META } from './meta';
 import { xorRunFor } from './runs';
 
-const DEFAULTS = XOR_SHARE_STATE.defaults.input;
+const DEFAULTS = XOR_SHARE.defaults.input;
 
 function isDefaultInput(input: typeof DEFAULTS): boolean {
   return input.a === DEFAULTS.a && input.b === DEFAULTS.b && input.crib === DEFAULTS.crib;
@@ -36,7 +36,7 @@ function isDefaultInput(input: typeof DEFAULTS): boolean {
  * `walkthrough.mdx`. Free play: the learner's own text, key seed and crib.
  */
 export function XorModule({ walkthrough }: { walkthrough?: ReactNode }) {
-  const share = useShareState(XOR_SHARE_STATE);
+  const share = useShareState(XOR_SHARE);
   const { state, setState, linked } = share;
   const [modeChoice, setModeChoice] = useState<ModuleMode | null>(null);
   const mode: ModuleMode =

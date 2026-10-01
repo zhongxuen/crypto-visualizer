@@ -16,7 +16,7 @@ import {
 } from '@/components/timeline';
 import { createRun } from '@/core/events/builder';
 import type { RsaEvent } from '@/core/rsa/events';
-import { RSA_SHARE_STATE, type RsaChapter } from '@/core/rsa/state';
+import { RSA_SHARE, type RsaChapter } from '@/core/rsa/share';
 
 import { EgcdView } from './components/EgcdView';
 import { FormulaPanel } from './components/FormulaPanel';
@@ -36,10 +36,10 @@ import { Value } from './components/parts';
 import { RSA_CHAPTER_LIST, RSA_META } from './meta';
 import { rsaRunFor } from './runs';
 
-type RsaState = typeof RSA_SHARE_STATE.defaults;
+type RsaState = typeof RSA_SHARE.defaults;
 type RsaInput = RsaState['input'];
 
-const DEFAULTS = RSA_SHARE_STATE.defaults;
+const DEFAULTS = RSA_SHARE.defaults;
 const EMPTY_RUN = createRun<RsaEvent>().finish();
 
 function isDefaultInput(state: RsaState): boolean {
@@ -108,7 +108,7 @@ function StepPicture({ event }: { event: RsaEvent }) {
  * step's view is rendered.
  */
 export function RsaModule({ walkthrough }: { walkthrough?: ReactNode }) {
-  const share = useShareState(RSA_SHARE_STATE);
+  const share = useShareState(RSA_SHARE);
   const { state, setState, linked } = share;
   const [modeChoice, setModeChoice] = useState<ModuleMode | null>(null);
   const mode: ModuleMode =

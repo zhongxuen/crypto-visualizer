@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { z } from 'zod';
+import * as z from 'zod/mini';
 
 import { createRng } from '../sim/rng';
 import { SHARE_STATES } from './index';
@@ -17,9 +17,9 @@ const DEMO = defineShareState({
   m: 'demo',
   v: 1,
   input: z.object({
-    plaintext: z.string().max(4000),
+    plaintext: z.string().check(z.maxLength(4000)),
     mode: z.enum(['ecb', 'cbc', 'ctr']),
-    exampleId: z.string().optional(),
+    exampleId: z.optional(z.string()),
   }),
   defaults: { seed: 7, step: 0, input: { plaintext: 'hello', mode: 'ecb' } },
 });
@@ -188,7 +188,7 @@ describe('defineShareState', () => {
       defineShareState({
         m: 'bad',
         v: 1,
-        input: z.object({ n: z.number().min(10) }),
+        input: z.object({ n: z.number().check(z.gte(10)) }),
         defaults: { seed: 0, step: 0, input: { n: 1 } },
       }),
     ).toThrow(/defaults are invalid/);

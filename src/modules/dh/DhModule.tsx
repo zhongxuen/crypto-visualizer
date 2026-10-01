@@ -1,12 +1,13 @@
 'use client';
 
 import { ChevronRight, Eye } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { StepInspector } from '@/components/inspector';
 import { ChapterContext, ChapterTabs } from '@/components/lesson';
 import { ModuleLayout, type ModuleMode } from '@/components/shell';
-import { useProgress, useShareState } from '@/components/state';
+import { useDeferredImport, useProgress, useShareState } from '@/components/state';
 import {
   BUTTON,
   PhaseStepper,
@@ -15,16 +16,12 @@ import {
   useRunView,
 } from '@/components/timeline';
 import type { DhEvent } from '@/core/dh/events';
-import { getGroup, isGroupId } from '@/core/dh/params';
-import { DH_SHARE_STATE, type DhScene } from '@/core/dh/state';
+import { DH_SHARE, type DhScene } from '@/core/dh/share';
 import { createRun } from '@/core/events/builder';
 import { cn } from '@/lib/cn';
 
 import { buildBoard, shortNumber, type LaneId } from './board';
-import { EveFoundView, EveGrowthView, EveSearchView } from './components/EveView';
-import { FreePlayInputs } from './components/Inputs';
 import { Lanes } from './components/Lanes';
-import { PowResultView, PowStepView } from './components/PowView';
 import {
   AgreeView,
   InterceptView,
@@ -41,13 +38,37 @@ import {
   X25519View,
 } from './components/StepView';
 import { DH_CHAPTER_LIST, DH_META } from './meta';
-import { dhRunFor } from './runs';
+import { paintRun } from './paintRun';
 
-type DhState = typeof DH_SHARE_STATE.defaults;
+// Not on the first screen (the paint scene, walkthrough mode), so they load when first
+// shown rather than in the route's first load (phase 10's 170 KB budget).
+const EveFoundView = dynamic(() =>
+  import('./components/EveView').then((m) => m.EveFoundView),
+);
+const EveGrowthView = dynamic(() =>
+  import('./components/EveView').then((m) => m.EveGrowthView),
+);
+const EveSearchView = dynamic(() =>
+  import('./components/EveView').then((m) => m.EveSearchView),
+);
+const FreePlayInputs = dynamic(() =>
+  import('./components/Inputs').then((m) => m.FreePlayInputs),
+);
+const PowResultView = dynamic(() =>
+  import('./components/PowView').then((m) => m.PowResultView),
+);
+const PowStepView = dynamic(() =>
+  import('./components/PowView').then((m) => m.PowStepView),
+);
+
+type DhState = typeof DH_SHARE.defaults;
 type DhInput = DhState['input'];
 
-const DEFAULTS = DH_SHARE_STATE.defaults;
+const DEFAULTS = DH_SHARE.defaults;
 const EMPTY_RUN = createRun<DhEvent>().finish();
+
+/** Every scene's run builder, loaded right after hydration (paint's is static). */
+const loadRuns = () => import('./runs');
 
 const THREE_LANES: readonly LaneId[] = ['alice', 'public', 'bob'];
 const WITH_EVE: readonly LaneId[] = ['alice', 'public', 'bob', 'eve'];
@@ -141,7 +162,7 @@ function EveToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => v
  * holds what so far; the picture below them shows the current step.
  */
 export function DhModule({ walkthrough }: { walkthrough?: ReactNode }) {
-  const share = useShareState(DH_SHARE_STATE);
+  const share = useShareState(DH_SHARE);
   const { state, setState, linked } = share;
   const [modeChoice, setModeChoice] = useState<ModuleMode | null>(null);
   const [eveOverlay, setEveOverlay] = useState(false);
@@ -152,18 +173,26 @@ export function DhModule({ walkthrough }: { walkthrough?: ReactNode }) {
 
   const { seed } = state;
   const { group, a, b, msg } = state.input;
+  const runs = useDeferredImport(loadRuns);
+  const loading = scene !== 'paint' && runs === null;
   const { result, problem } = useMemo(
     () => {
-      const run = dhRunFor(scene, mode, state);
+      const run =
+        scene === 'paint'
+          ? paintRun()
+          : runs
+            ? runs.dhRunFor(scene, mode, state)
+            : { result: null, problem: null };
       return { result: run.result ?? EMPTY_RUN, problem: run.problem };
     },
     // `state.step` changes on every step and must not rebuild the run.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scene, mode, group, a, b, msg, seed],
+    [scene, mode, group, a, b, msg, seed, runs],
   );
 
   const view = useRunView(result, {
-    initialStep: linked?.step,
+    // Held back until the run exists, or a link's step would land on an empty run.
+    initialStep: loading ? undefined : linked?.step,
     onStep: (step) =>
       setState((current) => (current.step === step ? current : { ...current, step })),
   });
@@ -194,8 +223,11 @@ export function DhModule({ walkthrough }: { walkthrough?: ReactNode }) {
   const events = result.events;
   const board = useMemo(() => buildBoard(events, view.index), [events, view.index]);
   const params = events.find((e) => e.kind === 'dh.params');
+  // A params event only exists in the deferred scenes, so `runs` is always there for it.
   const groupName =
-    params && isGroupId(params.groupId) ? getGroup(params.groupId).name : undefined;
+    params && runs?.isGroupId(params.groupId)
+      ? runs.getGroup(params.groupId).name
+      : undefined;
   const eve = scene === 'eve' || (scene === 'exchange' && eveOverlay);
   // Eve's own lane: always in her chapter, and in the paint chapter once she mixes.
   const showEveLane = scene === 'eve' || (scene === 'paint' && board.eve.length > 0);
@@ -260,7 +292,9 @@ export function DhModule({ walkthrough }: { walkthrough?: ReactNode }) {
         label={event?.label}
       />
       {!event ? (
-        <p className="text-fg-muted">{problem ?? 'Nothing to show.'}</p>
+        <p className="text-fg-muted">
+          {loading ? 'Loading this chapter…' : (problem ?? 'Nothing to show.')}
+        </p>
       ) : (
         <>
           {scene === 'exchange' ? (

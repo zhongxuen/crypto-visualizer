@@ -147,6 +147,24 @@ describe('createRun', () => {
     expect(build).toThrow();
   });
 
+  it('counts steps as they are added and copies a group’s plain sentence', () => {
+    const run = createRun<TestEvent>();
+    expect(run.length).toBe(0);
+    run.group(
+      'Plain',
+      () => {
+        run.step(event('a'));
+        expect(run.length).toBe(1);
+      },
+      { id: 'plain', plain: 'In short: one step.' },
+    );
+    run.group('Bare', () => run.step(event('b')));
+    expect(run.length).toBe(2);
+    const [plain, bare] = run.finish().phases;
+    expect(plain.plain).toBe('In short: one step.');
+    expect('plain' in bare).toBe(false);
+  });
+
   it('can start a new group after one threw', () => {
     const run = createRun<TestEvent>();
     expect(() =>

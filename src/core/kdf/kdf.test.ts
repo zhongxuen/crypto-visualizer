@@ -92,6 +92,18 @@ describe('lookup table', () => {
     expect(table.detail).toMatch(/rainbow table/);
     expect(table.citation).toBe('oechslin2003');
   });
+
+  it('has no collision step when nobody shares a password', () => {
+    const run = passwordTableRun({
+      users: [
+        { name: 'alice', password: 'sunshine' },
+        { name: 'bob', password: 'letmein' },
+      ],
+      seed: null,
+    });
+    expect(run.events.some((e) => e.kind === 'kdf.collision')).toBe(false);
+    expect(run.events.some((e) => e.kind === 'kdf.lookup')).toBe(true);
+  });
 });
 
 describe('cost model', () => {
@@ -149,6 +161,13 @@ describe('cost model', () => {
     expect(formatRate(8_865.7e3)).toBe('8.9 million');
     expect(formatRate(1437.5)).toBe('1.4 thousand');
     expect(formatRate(3)).toBe('3.0');
+    // Whole numbers from 10 up, one decimal below.
+    expect(formatDuration(45)).toBe('45 seconds');
+    expect(formatDuration(1)).toBe('1 second');
+    expect(formatDuration(36 * 3600)).toBe('1.5 days');
+    expect(formatRate(250)).toBe('250');
+    expect(formatRate(9.94)).toBe('9.9');
+    expect(formatRate(42e9)).toBe('42 billion');
     expect(PASSWORD_SPACES.find((s) => s.id === 'lower8')!.size).toBe(208_827_064_576);
     expect(groupDigits(600000)).toBe('600,000');
   });

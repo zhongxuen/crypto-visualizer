@@ -19,14 +19,31 @@ const steps = (n: number) => {
   for (let i = 0; i < n; i += 1) next();
 };
 
+/**
+ * Renders the page and waits for what it loads after hydration: the non-paint chapters'
+ * runs (`useDeferredImport`) and the views behind `next/dynamic`.
+ */
+async function renderLoaded() {
+  const rendered = render(<DhModule />);
+  await act(async () => {
+    await Promise.all([
+      import('./runs'),
+      import('./components/EveView'),
+      import('./components/Inputs'),
+      import('./components/PowView'),
+    ]);
+  });
+  return rendered;
+}
+
 describe('DhModule', () => {
   beforeEach(() => {
     localStorage.clear();
     window.history.replaceState(null, '', '/dh');
   });
 
-  it('mixes the same paint on both sides', () => {
-    render(<DhModule />);
+  it('mixes the same paint on both sides', async () => {
+    await renderLoaded();
     const lanes = screen.getByRole('list', { name: 'Alice, the public channel and Bob' });
     expect(
       within(lanes).getByRole('list', { name: 'Public channel holds' }),
@@ -35,8 +52,8 @@ describe('DhModule', () => {
     expect(screen.getByTestId('dh-paint-same')).toHaveTextContent('The same colour');
   });
 
-  it('steps the exchange to the shared secret 16, with a clock for p = 23', () => {
-    render(<DhModule />);
+  it('steps the exchange to the shared secret 16, with a clock for p = 23', async () => {
+    await renderLoaded();
     chapter('The exchange');
     expect(
       screen.getByRole('img', { name: /Numbers mod p: 2 \(mod 23\)/ }),
@@ -44,18 +61,18 @@ describe('DhModule', () => {
     steps(3);
     expect(screen.getByRole('status')).toHaveTextContent('Alice, bit 1 of 3 is 1');
     expect(
-      screen.getByRole('img', { name: /Running value: 1 → 2 \(mod 23\)/ }),
+      await screen.findByRole('img', { name: /Running value: 1 → 2 \(mod 23\)/ }),
     ).toBeInTheDocument();
     steps(3);
-    expect(screen.getByTestId('dh-share-A')).toHaveTextContent('18');
+    expect(await screen.findByTestId('dh-share-A')).toHaveTextContent('18');
     for (let i = 0; i < 19; i += 1) next();
-    expect(screen.getByTestId('dh-agree')).toHaveTextContent('The same number');
+    expect(await screen.findByTestId('dh-agree')).toHaveTextContent('The same number');
     const alice = screen.getByRole('list', { name: 'Alice holds' });
     expect(alice).toHaveTextContent('Secret16');
   });
 
-  it("hides private values in Eve's view", () => {
-    render(<DhModule />);
+  it("hides private values in Eve's view", async () => {
+    await renderLoaded();
     chapter('The exchange');
     steps(2);
     const alice = () => screen.getByRole('list', { name: 'Alice holds' });
@@ -65,28 +82,28 @@ describe('DhModule', () => {
     expect(alice()).toHaveTextContent('hidden from Eve');
   });
 
-  it('lets Eve brute-force a = 6 and shows how the search grows', () => {
-    render(<DhModule />);
+  it('lets Eve brute-force a = 6 and shows how the search grows', async () => {
+    await renderLoaded();
     chapter('Eve listens');
     steps(7);
     expect(screen.getByRole('status')).toHaveTextContent('That is A');
-    const table = screen.getByRole('region', { name: "Eve's guesses" });
+    const table = await screen.findByRole('region', { name: "Eve's guesses" });
     expect(within(table).getAllByRole('row')).toHaveLength(7);
     const eveLane = () => screen.getByRole('list', { name: 'Eve holds' });
     expect(() => eveLane()).toThrow();
     next();
-    expect(screen.getByTestId('dh-eve-a')).toHaveTextContent('6');
+    expect(await screen.findByTestId('dh-eve-a')).toHaveTextContent('6');
     expect(eveLane()).toHaveTextContent('a6');
     expect(eveLane()).toHaveTextContent('Secret16');
     expect(screen.getByTestId('dh-eve-secret')).toHaveTextContent('16');
     end();
-    const growth = screen.getByTestId('dh-growth');
+    const growth = await screen.findByTestId('dh-growth');
     expect(within(growth).getAllByRole('row')).toHaveLength(7);
     expect(growth).toHaveTextContent('a 617-digit number');
   });
 
-  it('shows Mallory in the middle with two different secrets', () => {
-    render(<DhModule />);
+  it('shows Mallory in the middle with two different secrets', async () => {
+    await renderLoaded();
     chapter('Man in the middle');
     const lanes = screen.getByRole('list', {
       name: 'Alice, Mallory in the middle, and Bob',
@@ -102,11 +119,11 @@ describe('DhModule', () => {
     );
   });
 
-  it('takes free-play private keys and refuses one out of range', () => {
-    render(<DhModule />);
+  it('takes free-play private keys and refuses one out of range', async () => {
+    await renderLoaded();
     chapter('The exchange');
     fireEvent.click(screen.getByRole('button', { name: 'Free play' }));
-    fireEvent.change(screen.getByLabelText(/^Alice's private a/), {
+    fireEvent.change(await screen.findByLabelText(/^Alice's private a/), {
       target: { value: '20' },
     });
     expect(screen.getByTestId('dh-a-feedback')).toHaveTextContent('between 2 and 9');
@@ -118,7 +135,7 @@ describe('DhModule', () => {
   });
 
   it('is axe clean in every chapter', async () => {
-    const { container } = render(<DhModule />);
+    const { container } = await renderLoaded();
     for (const name of ['Paint', 'The exchange', 'Eve listens', 'Man in the middle']) {
       chapter(name);
       next();

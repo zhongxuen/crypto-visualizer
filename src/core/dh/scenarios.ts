@@ -1,17 +1,11 @@
 import type { Scenario } from '../scenarios';
-import { dhExchangeRun, type DhInput } from './dh';
+import { dhExchangeRun } from './dh';
 import { dhEveRun } from './eavesdropper';
 import { DEFAULT_MITM_MESSAGE, dhMitmRun } from './mitm';
 import { dhPaintRun } from './paint';
+import { DH_DEFAULT_INPUT, DH_MITM_INPUT } from './examples';
 
-/** The default seed for private keys. */
-export const DH_DEFAULT_SEED = 1;
-
-/** The default exchange: the smallest group, small enough for the modular clock. */
-export const DH_DEFAULT_INPUT: DhInput = { group: 'p23', seed: DH_DEFAULT_SEED };
-
-/** MITM and Eve default to p = 467: big enough that a lucky collision is unlikely. */
-export const DH_MITM_INPUT: DhInput = { group: 'p467', seed: DH_DEFAULT_SEED };
+export { DH_DEFAULT_INPUT, DH_DEFAULT_SEED, DH_MITM_INPUT } from './examples';
 
 export const DH_SCENARIOS: readonly Scenario[] = [
   { id: 'dh.paint', run: () => dhPaintRun() },

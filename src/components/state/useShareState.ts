@@ -2,13 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type {
+  LazyShareState,
+  ModuleShareState,
+  ShareStateBase,
+} from '@/core/state/schema';
 import {
   encodeShareState,
   SHARE_PARAM,
   shareStateFromSearch,
-  type ModuleShareState,
-  type ShareStateBase,
-} from '@/core/state';
+} from '@/core/state/shareState';
 
 /**
  * `useShareState(definition)`: a module's `?s=` state, read on load and written back.
@@ -23,6 +26,10 @@ import {
  * run doesn't leave 300 history entries behind.
  *
  * The codec refuses password-like keys, so a module can't write one by mistake.
+ *
+ * The definition is a `LazyShareState`: its zod schema is imported only when the link is
+ * read, after hydration, so zod stays out of the route's first-load JS. `ready` turns
+ * true once it has loaded and the link has been decoded.
  */
 
 export interface UseShareState<S extends ShareStateBase> {
@@ -38,27 +45,35 @@ export interface UseShareState<S extends ShareStateBase> {
 }
 
 export function useShareState<S extends ShareStateBase>(
-  definition: ModuleShareState<S>,
+  definition: LazyShareState<S>,
   { delayMs = 300 }: { delayMs?: number } = {},
 ): UseShareState<S> {
   const [state, setStateRaw] = useState<S>(definition.defaults);
   const [linked, setLinked] = useState<S | null>(null);
+  const [full, setFull] = useState<ModuleShareState<S> | null>(null);
   const [shareable, setShareable] = useState(true);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ready = linked !== null;
 
   useEffect(() => {
     // The URL is only readable after hydration; this effect is the sync from it.
-    const fromLink = shareStateFromSearch(definition, window.location.search);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setStateRaw(fromLink);
-    setLinked(fromLink);
+    let live = true;
+    void definition.load().then((loaded) => {
+      if (!live) return;
+      const fromLink = shareStateFromSearch(loaded, window.location.search);
+      setFull(loaded);
+      setStateRaw(fromLink);
+      setLinked(fromLink);
+    });
+    return () => {
+      live = false;
+    };
   }, [definition]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || full === null) return;
     timer.current = setTimeout(() => {
-      const encoded = encodeShareState(definition, state);
+      const encoded = encodeShareState(full, state);
       setShareable(encoded !== null);
       const url = new URL(window.location.href);
       if (encoded === null) url.searchParams.delete(SHARE_PARAM);
@@ -70,7 +85,7 @@ export function useShareState<S extends ShareStateBase>(
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [definition, state, ready, delayMs]);
+  }, [full, state, ready, delayMs]);
 
   const setState = useCallback((next: S | ((current: S) => S)) => {
     setStateRaw((current) =>
