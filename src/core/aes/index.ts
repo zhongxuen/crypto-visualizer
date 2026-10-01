@@ -1,14 +1,12 @@
+export { avalancheRun, flipBlockBit, roundStates } from './avalanche';
+export { keyExpansionRun } from './keyScheduleRun';
 export {
-  avalancheRun,
   cipher,
   decryptBlock,
   decryptWithRoundKeys,
   encryptBlock,
   encryptWithRoundKeys,
-  flipBlockBit,
   invCipher,
-  keyExpansionRun,
-  roundStates,
   type AesBlockRun,
   type AesOperation,
   type CipherTrace,

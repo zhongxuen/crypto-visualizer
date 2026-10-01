@@ -22,7 +22,7 @@ the design work directly:
 
 - **Aim 5 (quality bar):** axe on every route, keyboard-only use, reduced motion, and
   **170 KB of gzipped first-load JS per module route**. Every route is inside it now, but
-  `/rsa` has 0.4 KB left (§3, B2), so the motion work has to be CSS-first and cheap.
+  `/aes` has only 3.2 KB left (§3, B2), so the motion work has to be CSS-first and cheap.
 - **Aim 4 (honesty):** the redesign must not hide the "for learning only" message. It can
   say it once, clearly, instead of three times.
 
@@ -59,8 +59,9 @@ deployment existed for the domain to point at.
   to `main`, with no branch or PR unless one is actually needed (the parallel worktrees in
   wave 2). Either relax the branch rule on GitHub or keep relying on the bypass.
 - ~~Get the three over-budget routes back under 170 KB (B2).~~ Done: all six module
-  routes are within budget and `npm run verify` runs `perf:bundles`. Getting them to
-  165 KB for the motion work is still open (U0.2).
+  routes are within budget and `npm run verify` runs `perf:bundles`. U0.2 brought four of
+  the six under 165 KB for the motion work; `/aes` (166.8) and `/rsa` (166.1) are still
+  over it (§3, B2).
 
 ---
 
@@ -177,7 +178,7 @@ Each point says what happened, why it hurts a learner, and the fix (referenced i
 |---|---|---|---|---|
 | B0 | Critical | Deploy | The production URL was a 404 (§1). | **Fixed.** |
 | B1 | High | `/rsa` walkthrough, `globals.css` | `.prose-cv` has no table styles, so GFM tables in MDX render with 0 px cell padding and the columns run together. Only `rsa/walkthrough.mdx` has a table today, but any future table breaks the same way. | Add `.prose-cv table/th/td` styles (padding, borders, right-aligned numeric columns with tabular figures), wrapped in a horizontal scroller on small screens. (W0.1) |
-| B2 | High | Build | **Fixed to 170 KB.** Was: `/rsa` 177.6, `/aes` 176.8, `/passwords` 174.9 KB. Now: `/rsa` 169.6, `/aes` 167.7, `/passwords` 167.3, `/hashing` 167.2, `/dh` 165.3, `/xor` 164.3 KB, from deferring every non-first chapter's run and views (`useDeferredImport`) and giving each page only its own citations (`ModuleLayout`'s `citations` prop). Still open: 165 KB headroom for the motion work. | See CLAUDE.md for the pattern. Walkthrough views must **not** go behind `next/dynamic`: a view that suspends mid-walkthrough swallows an arrow-key press (it broke `e2e/dh.spec.ts`). (W0.2) |
+| B2 | High | Build | **Fixed to 170 KB.** Was: `/rsa` 177.6, `/aes` 176.8, `/passwords` 174.9 KB. Now: `/rsa` 169.6, `/aes` 167.7, `/passwords` 167.3, `/hashing` 167.2, `/dh` 165.3, `/xor` 164.3 KB, from deferring every non-first chapter's run and views (`useDeferredImport`) and giving each page only its own citations (`ModuleLayout`'s `citations` prop). **U0.2 (2026-10-02):** `/aes` 166.8, `/rsa` 166.1, `/passwords` 164.9, `/hashing` 164.7, `/xor` 164.4, `/dh` 164.1 KB. Free play's forms now come with `runs.ts` instead of `next/dynamic` (its loader was ~2 KB per route); later chapters' run builders moved out of shared core files (`sha256/run.ts`, `sha256/avalanche.ts`, `aes/keyScheduleRun.ts`, `aes/avalanche.ts`); RSA's and hashing's later views, the PBKDF2 Worker and the borrowed citation lists load after hydration too. **Still open:** `/aes` and `/rsa` over 165. What's left in their first load is the first chapter itself plus shared code; the next real lever is `cn`'s tailwind-merge (8.4 KB on every route), but `BUTTON` overrides rely on its merging, so it needs those call sites made conflict-free first. | See CLAUDE.md for the pattern. Walkthrough views must **not** go behind `next/dynamic`: a view that suspends mid-walkthrough swallows an arrow-key press (it broke `e2e/dh.spec.ts`). (W0.2) |
 | B3 | Medium | `PlaybackControls` | Next and ⏭ stay enabled at the last step, and Back and ⏮ at the first. A press does nothing and gives no feedback. | Set `aria-disabled` and dim them at the ends (keep them focusable so keyboard focus isn't lost). (W0.1) |
 | B4 | Medium | `rsa/components/*` value panel | The value display looks like a focused `<input>` (wide box, accent outline). | Restyle it as a read-only value card (W2.5). |
 | B5 | Medium | `hashing` round view | `Σ0`, `Σ1` render in a fallback font with a different size and baseline from the mono digits. | Use a mono font that has Σ and σ (JetBrains Mono does), or wrap the symbols in a span with the sans font at a matched size. (W1.1) |

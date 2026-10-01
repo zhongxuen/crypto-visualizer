@@ -7,12 +7,12 @@ import { RsaModule } from './RsaModule';
 
 /**
  * Renders the page and waits for what it loads after hydration: the other chapters' runs
- * (`useDeferredImport`) and free play's inputs (`next/dynamic`).
+ * and views, their citations and free play's inputs (`./runs`, `useDeferredImport`).
  */
 async function renderLoaded() {
   const rendered = render(<RsaModule />);
   await act(async () => {
-    await Promise.all([import('./runs'), import('./components/Inputs')]);
+    await import('./runs');
   });
   return rendered;
 }
@@ -28,7 +28,9 @@ function chapter(name: string) {
 const next = () => act(() => fireEvent.keyDown(window, { key: 'ArrowRight' }));
 const end = () => act(() => fireEvent.keyDown(window, { key: 'End' }));
 
-describe('RsaModule', () => {
+// Each test waits for code the page loads after hydration; under a loaded parallel run
+// (`npm run verify` with coverage) that can pass the 5 s default.
+describe('RsaModule', { timeout: 20_000 }, () => {
   beforeEach(() => {
     localStorage.clear();
     window.history.replaceState(null, '', '/rsa');
@@ -69,7 +71,7 @@ describe('RsaModule', () => {
   it('gives prime feedback in free play and refuses a composite', async () => {
     await renderLoaded();
     fireEvent.click(screen.getByRole('button', { name: 'Free play' }));
-    // Free play's form is behind `next/dynamic`, so it appears a moment later.
+    // Free play's form comes with `./runs`, so it can appear a moment later.
     fireEvent.change(await screen.findByLabelText(/^Prime p/), {
       target: { value: '91' },
     });

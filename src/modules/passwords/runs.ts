@@ -9,6 +9,7 @@ import { PBKDF2_EXAMPLES } from '@/core/kdf/share';
 import type { PasswordsShareState } from '@/core/kdf/state';
 import type { SimResult } from '@/core/sim/result';
 
+import type { Pbkdf2Request } from './pbkdf2.worker';
 import { tableRunFor } from './tableRun';
 
 export { EMPTY_RUN } from './tableRun';
@@ -16,7 +17,8 @@ export { EMPTY_RUN } from './tableRun';
 // the PBKDF2 and cost chapters. They render from the loaded module rather than through
 // `next/dynamic`, so nothing suspends while a learner steps.
 export { CostView } from './components/CostView';
-export { Pbkdf2View } from './components/Pbkdf2View';
+export { Pbkdf2Chapter } from './components/Pbkdf2Chapter';
+export { FreePlayInputs } from './components/Inputs';
 
 /** Key length the module derives: one SHA-256 block. */
 export const DK_LEN = 32;
@@ -38,6 +40,21 @@ export function pbkdf2Inputs(
     salt: utf8Encode(example.salt),
     iterations: mode === 'walkthrough' ? OWASP_PBKDF2_ITERATIONS : input.iterations,
     dkLen: DK_LEN,
+  };
+}
+
+/** The same inputs as the Worker's request: every iteration, run for real off the page. */
+export function pbkdf2Request(
+  mode: 'walkthrough' | 'free',
+  input: PasswordsShareState['input'],
+  typed: string,
+): Pbkdf2Request {
+  const params = pbkdf2Inputs(mode, input, typed);
+  return {
+    password: Array.from(params.password),
+    salt: Array.from(params.salt),
+    iterations: params.iterations,
+    dkLen: params.dkLen,
   };
 }
 

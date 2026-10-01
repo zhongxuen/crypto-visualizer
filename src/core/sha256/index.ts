@@ -12,17 +12,15 @@ export type * from './events';
 export { padMessage, paddedLength, writePadding, zeroPadLength } from './pad';
 export { SHA256_EXAMPLES, SHA256_SCENARIOS } from './scenarios';
 export { expandSchedule, rotr, smallSigma0, smallSigma1 } from './schedule';
+export { avalancheRun, flipBit } from './avalanche';
+export { sha256Run, sha256Stepped } from './run';
 export {
-  avalancheRun,
-  flipBit,
   initialState,
   MAX_STEPPED_BYTES,
   ROUNDS_PER_GROUP,
   sha256,
   sha256Block,
   sha256Finish,
-  sha256Run,
-  sha256Stepped,
   stateToBytes,
 } from './sha256';
 export {

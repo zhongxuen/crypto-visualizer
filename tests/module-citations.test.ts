@@ -2,12 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import type { CitationRegistry } from '@/core/citations/registry';
 import { SCENARIOS } from '@/core/scenarios';
+import { AES_BLOCK_CITATIONS } from '@/modules/aes/blockCitations';
 import { AES_PAGE_CITATIONS } from '@/modules/aes/citations';
 import { DH_PAGE_CITATIONS } from '@/modules/dh/citations';
 import { HASHING_PAGE_CITATIONS } from '@/modules/hashing/citations';
+import { HASHING_SHA256_CITATIONS } from '@/modules/hashing/sha256Citations';
 import { PASSWORDS_PAGE_CITATIONS } from '@/modules/passwords/citations';
 import { MODULES } from '@/modules/registry';
 import { RSA_PAGE_CITATIONS } from '@/modules/rsa/citations';
+import { RSA_KEYS_CITATIONS } from '@/modules/rsa/keysCitations';
 import { XOR_PAGE_CITATIONS } from '@/modules/xor/citations';
 
 /**
@@ -47,6 +50,33 @@ describe('module citation registries', () => {
         .run()
         .events.filter((event) => !page.citations.has(event.citation))
         .map((event) => `${page.slug} page: ${scenario.id} cites ${event.citation}`);
+    });
+    expect([...new Set(missing)]).toEqual([]);
+  });
+
+  // A page whose later chapters load after hydration starts with a smaller registry; the
+  // full one comes with the runs that need it. The first chapter's steps must be covered
+  // by the small one, or they'd show "Source: <id>" until the rest loads.
+  it("hold every citation the first chapter's scenarios emit before the rest loads", () => {
+    const FIRST: Record<string, { pattern: RegExp; citations: CitationRegistry }> = {
+      aes: { pattern: /^aes\.fips197-(appendix-b|c1)$/, citations: AES_BLOCK_CITATIONS },
+      rsa: { pattern: /^rsa\.keygen-/, citations: RSA_KEYS_CITATIONS },
+      sha256: {
+        pattern: /^sha256\.(abc|two-block)$/,
+        citations: HASHING_SHA256_CITATIONS,
+      },
+    };
+    const covered = Object.values(FIRST).map(
+      ({ pattern }) => SCENARIOS.filter((scenario) => pattern.test(scenario.id)).length,
+    );
+    expect(covered.every((n) => n > 0)).toBe(true);
+    const missing = SCENARIOS.flatMap((scenario) => {
+      const first = Object.values(FIRST).find(({ pattern }) => pattern.test(scenario.id));
+      if (!first) return [];
+      return scenario
+        .run()
+        .events.filter((event) => !first.citations.has(event.citation))
+        .map((event) => `${scenario.id} cites ${event.citation}`);
     });
     expect([...new Set(missing)]).toEqual([]);
   });

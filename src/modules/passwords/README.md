@@ -7,6 +7,9 @@ Renders the runs in `src/core/kdf`; computes nothing itself.
 - `components/UsersView.tsx`: the users table (shared hashes marked in words), the
   attacker's table, lookups filled in as the run reaches them.
 - `components/Pbkdf2View.tsx`: U1–U3 and the running XOR, then the rest in a Worker.
+- `components/Pbkdf2Chapter.tsx`: the PBKDF2 view plus its Worker job. It comes with
+  `runs.ts` after hydration, so the Worker code is not in the route's first load.
+- `components/Inputs.tsx`: the free-play inputs (also from `runs.ts`).
 - `components/CostView.tsx`: GPU slider, scheme parameters and log-scale bars, every rate
   with its source (`src/core/kdf/costModel.ts`).
 - `pbkdf2.worker.ts` + `usePbkdf2Worker.ts`: the full iteration count off the main

@@ -11,6 +11,7 @@ import type { SimResult } from '@/core/sim/result';
 // For the page, which loads this file after hydration (`useDeferredImport`).
 export { getGroup, isGroupId } from '@/core/dh/params';
 export { ScenePicture } from './components/ScenePicture';
+export { FreePlayInputs } from './components/Inputs';
 
 type Mode = 'walkthrough' | 'free';
 

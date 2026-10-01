@@ -85,14 +85,24 @@ Other fixed rules:
 - `npm run verify` enforces the 95% `src/core` coverage floor and, through
   `perf/bundles.mjs`, 170 KB of gzipped first-load JS per module route.
 - To stay in that budget, a module's first chapter is static and the rest load right
-  after hydration: `runs.ts` (every chapter's run, and the views only those chapters
-  use) comes in through `useDeferredImport`, and the first chapter's builder lives in its
-  own file (`paintRun.ts`, `keysRun.ts`, `blockRun.ts`, `tableRun.ts`). Hold `initialStep`
-  back until the run exists. Don't put walkthrough views behind `next/dynamic`: a view
-  that suspends mid-walkthrough swallows an arrow-key press. Free play's form may be.
+  after hydration: `runs.ts` (every chapter's run, the views only those chapters use, and
+  free play's form) comes in through `useDeferredImport` and is rendered from the loaded
+  module (`runs.FreePlayInputs`, `runs.ChapterPicture`, ...). The first chapter's builder
+  lives in its own file (`paintRun.ts`, `keysRun.ts`, `blockRun.ts`, `tableRun.ts`,
+  `sha256Run.ts`). Hold `initialStep` back until the run exists. Don't use `next/dynamic`
+  on a module page: a walkthrough view that suspends swallows an arrow-key press, and its
+  loader alone costs about 2 KB of first-load JS, more than any free-play form.
+- Turbopack ships a core file whole, so a later chapter's run builder must not share a
+  file with what the first chapter needs (`sha256/run.ts` and `sha256/avalanche.ts` apart
+  from the fast path in `sha256.ts`; `aes/keyScheduleRun.ts` and `aes/avalanche.ts` apart
+  from `aes128.ts`). Stepped and fast paths still go through one shared loop.
 - `CitationLink` reads the page's registry from context. Each module passes its own
   (`src/modules/<name>/citations.ts`) to `ModuleLayout`'s `citations` prop;
-  `tests/module-citations.test.ts` checks it covers everything the module's runs cite.
+  `tests/module-citations.test.ts` checks it covers everything the module's runs cite. A
+  page may start with a smaller registry for its first chapter (`keysCitations.ts`,
+  `blockCitations.ts`, `sha256Citations.ts`) and switch to the full one when `runs.ts`
+  arrives with the later chapters' events; the same test checks the small one covers the
+  first chapter.
 
 ## Rules for parallel agents (00-overview §4)
 

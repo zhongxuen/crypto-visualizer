@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronRight } from 'lucide-react';
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { HexBinToggle, useByteFormat } from '@/components/blocks';
 import { StepInspector } from '@/components/inspector';
@@ -15,23 +15,22 @@ import {
   TimelineBar,
   useRunView,
 } from '@/components/timeline';
-import {
-  PASSWORDS_SHARE,
-  PBKDF2_EXAMPLES,
-  type PasswordsChapter,
-} from '@/core/kdf/share';
+import { PASSWORDS_SHARE, type PasswordsChapter } from '@/core/kdf/share';
 import type { PasswordsShareState } from '@/core/kdf/state';
 
 import { AttackerTable, tableStateAt, UsersTable } from './components/UsersView';
 import { PASSWORDS_PAGE_CITATIONS } from './citations';
 import { PASSWORDS_CHAPTER_LIST, PASSWORDS_META } from './meta';
 import { EMPTY_RUN, tableRunFor } from './tableRun';
-import { usePbkdf2Worker } from './usePbkdf2Worker';
 
 type Input = PasswordsShareState['input'];
 const DEFAULTS = PASSWORDS_SHARE.defaults.input;
 
-/** PBKDF2's run, and the PBKDF2 and cost views, loaded right after hydration. */
+/**
+ * PBKDF2's run, and the PBKDF2 and cost views, loaded right after hydration.
+ * Free play's inputs come with it too: not through `next/dynamic`, whose loader alone
+ * costs more first-load JS than any of the forms (phase 10's budget).
+ */
 const loadRuns = () => import('./runs');
 
 function isDefaultInput(input: Input): boolean {
@@ -59,7 +58,6 @@ export function PasswordsModule({ walkthrough }: { walkthrough?: ReactNode }) {
   const chapter = state.input.chapter;
   const [format, setFormat] = useByteFormat();
   const { markComplete, progress } = useProgress();
-  const job = usePbkdf2Worker();
 
   const { exampleId, iterations } = state.input;
   const runs = useDeferredImport(loadRuns);
@@ -75,9 +73,6 @@ export function PasswordsModule({ walkthrough }: { walkthrough?: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [mode, chapter, exampleId, iterations, state.seed, typed, runs],
   );
-
-  const { reset } = job;
-  useEffect(() => reset(), [result, reset]);
 
   const view = useRunView(result, {
     // Held back until the run exists, or a link's step would land on an empty run.
@@ -101,18 +96,6 @@ export function PasswordsModule({ walkthrough }: { walkthrough?: ReactNode }) {
     }));
   const setInput = (patch: Partial<Input>) =>
     setState((current) => ({ ...current, input: { ...current.input, ...patch } }));
-
-  const startWorker = () => {
-    // Only reachable from the PBKDF2 view, which renders from `runs`.
-    if (!runs) return;
-    const params = runs.pbkdf2Inputs(mode, state.input, typed);
-    job.start({
-      password: Array.from(params.password),
-      salt: Array.from(params.salt),
-      iterations: params.iterations,
-      dkLen: params.dkLen,
-    });
-  };
 
   const event = view.event;
   const hasRun = result.events.length > 0;
@@ -147,19 +130,21 @@ export function PasswordsModule({ walkthrough }: { walkthrough?: ReactNode }) {
               {walkthrough}
             </ChapterContext.Provider>
           ) : chapter !== 'cost' ? (
-            <FreePlayInputs
-              chapter={chapter}
-              input={state.input}
-              onChange={(patch) =>
-                setState((current) => ({
-                  ...current,
-                  step: 0,
-                  input: { ...current.input, ...patch },
-                }))
-              }
-              typed={typed}
-              onTyped={setTyped}
-            />
+            runs ? (
+              <runs.FreePlayInputs
+                chapter={chapter}
+                input={state.input}
+                onChange={(patch) =>
+                  setState((current) => ({
+                    ...current,
+                    step: 0,
+                    input: { ...current.input, ...patch },
+                  }))
+                }
+                typed={typed}
+                onTyped={setTyped}
+              />
+            ) : null
           ) : null}
         </>
       }
@@ -207,7 +192,12 @@ export function PasswordsModule({ walkthrough }: { walkthrough?: ReactNode }) {
       ) : null}
 
       {event && chapter === 'pbkdf2' && runs ? (
-        <runs.Pbkdf2View event={event} format={format} job={job} onStart={startWorker} />
+        <runs.Pbkdf2Chapter
+          event={event}
+          format={format}
+          run={result}
+          request={() => runs.pbkdf2Request(mode, state.input, typed)}
+        />
       ) : null}
 
       {mode === 'walkthrough' && view.atEnd && !lastChapter ? (
@@ -221,98 +211,5 @@ export function PasswordsModule({ walkthrough }: { walkthrough?: ReactNode }) {
         </button>
       ) : null}
     </ModuleLayout>
-  );
-}
-
-function FreePlayInputs({
-  chapter,
-  input,
-  onChange,
-  typed,
-  onTyped,
-}: {
-  chapter: PasswordsChapter;
-  input: Input;
-  onChange: (patch: Partial<Input>) => void;
-  typed: string;
-  onTyped: (value: string) => void;
-}) {
-  const id = useId();
-  const field =
-    'border-border bg-surface focus-visible:outline-focus w-full rounded-md border px-2 py-1.5 font-mono focus-visible:outline-2';
-
-  return (
-    <div className="border-border bg-surface grid gap-3 rounded-lg border p-3 sm:grid-cols-2">
-      <div className="flex flex-col gap-1 text-sm sm:col-span-2">
-        <label htmlFor={`${id}-own`}>Try your own password</label>
-        <input
-          id={`${id}-own`}
-          type="text"
-          autoComplete="off"
-          spellCheck={false}
-          className={field}
-          value={typed}
-          maxLength={64}
-          onChange={(e) => onTyped(e.target.value)}
-          aria-describedby={`${id}-own-note`}
-          data-private=""
-        />
-        <p id={`${id}-own-note`} className="text-warn text-xs">
-          Don’t type a real password. It stays in this page’s memory only: it is never put
-          in the link, in your browser’s storage or in analytics, and a share link won’t
-          include it.
-        </p>
-      </div>
-      {chapter === 'lookup' || chapter === 'salt' ? (
-        <label className="flex items-center gap-2 text-sm" htmlFor={`${id}-salt`}>
-          <input
-            id={`${id}-salt`}
-            type="checkbox"
-            checked={chapter === 'salt'}
-            onChange={(e) => onChange({ chapter: e.target.checked ? 'salt' : 'lookup' })}
-            className="accent-accent size-4"
-          />
-          Salt the hashes
-        </label>
-      ) : null}
-      {chapter === 'pbkdf2' ? (
-        <>
-          <label className="flex flex-col gap-1 text-sm" htmlFor={`${id}-example`}>
-            Built-in example {typed ? '(its salt is used with your password)' : ''}
-            <select
-              id={`${id}-example`}
-              className={field}
-              value={input.exampleId}
-              onChange={(e) =>
-                onChange({ exampleId: e.target.value as Input['exampleId'] })
-              }
-            >
-              {PBKDF2_EXAMPLES.map((example) => (
-                <option key={example.id} value={example.id}>
-                  {example.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm" htmlFor={`${id}-iterations`}>
-            Iterations
-            <input
-              id={`${id}-iterations`}
-              type="number"
-              min={1}
-              max={10_000_000}
-              className={field}
-              value={input.iterations}
-              onChange={(e) => {
-                const value = Number(e.target.value);
-                if (Number.isInteger(value) && value >= 1 && value <= 10_000_000) {
-                  onChange({ iterations: value });
-                }
-              }}
-            />
-          </label>
-        </>
-      ) : null}
-    </div>
   );
 }

@@ -2,16 +2,26 @@ import { utf8Encode } from '@/core/bytes/utf8';
 import type { HmacEvent } from '@/core/hmac/events';
 import { hmacRun } from '@/core/hmac/hmac';
 import type { Sha256Event } from '@/core/sha256/events';
-import { avalancheRun, sha256Run } from '@/core/sha256/sha256';
+import { avalancheRun } from '@/core/sha256/avalanche';
 import type { HashingChapter, HashingShareState } from '@/core/sha256/state';
 import type { SimResult } from '@/core/sim/result';
 
 import { HASHING_WALKTHROUGH } from './meta';
+import { sha256RunFor } from './sha256Run';
+
+// For the page, which loads this file after hydration (`useDeferredImport`): the views of
+// the avalanche and HMAC chapters. They render from the loaded module rather than through
+// `next/dynamic`, so nothing suspends while a learner steps.
+export { HASHING_PAGE_CITATIONS } from './citations';
+export { AvalancheView } from './components/AvalancheView';
+export { HmacView } from './components/HmacView';
+export { FreePlayInputs } from './components/Inputs';
 
 export type HashingEvent = Sha256Event | HmacEvent;
 
 /**
- * Which core run a chapter shows. Free play's message doubles as the HMAC message.
+ * Which core run a chapter shows. Loaded after hydration; the SHA-256 chapter's run is
+ * also in `./sha256Run`, which the first screen uses. Free play's message doubles as the HMAC message.
  * Returns `null` when the input can't make a run (an empty message has no bit to flip).
  */
 export function hashingRunFor(
@@ -22,7 +32,7 @@ export function hashingRunFor(
   const walk = mode === 'walkthrough';
   switch (chapter) {
     case 'sha256':
-      return sha256Run(utf8Encode(walk ? HASHING_WALKTHROUGH.message : input.message));
+      return sha256RunFor(mode, input);
     case 'avalanche': {
       const message = utf8Encode(
         walk ? HASHING_WALKTHROUGH.avalancheMessage : input.message,

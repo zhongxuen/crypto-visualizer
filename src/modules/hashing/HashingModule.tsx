@@ -1,13 +1,13 @@
 'use client';
 
 import { ChevronRight, SkipForward } from 'lucide-react';
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { HexBinToggle, useByteFormat } from '@/components/blocks';
 import { StepInspector } from '@/components/inspector';
 import { ChapterContext, ChapterTabs } from '@/components/lesson';
 import { ModuleLayout, type ModuleMode } from '@/components/shell';
-import { useProgress, useShareState } from '@/components/state';
+import { useDeferredImport, useProgress, useShareState } from '@/components/state';
 import {
   BUTTON,
   PhaseStepper,
@@ -15,26 +15,26 @@ import {
   TimelineBar,
   useRunView,
 } from '@/components/timeline';
-import { utf8Encode } from '@/core/bytes/utf8';
 import type { HmacEvent } from '@/core/hmac/events';
 import type { Sha256Event } from '@/core/sha256/events';
 import { createRun } from '@/core/events/builder';
-import { MAX_STEPPED_BYTES } from '@/core/sha256/sha256';
-import {
-  HASHING_SHARE,
-  MAX_HMAC_KEY_BYTES,
-  type HashingChapter,
-} from '@/core/sha256/share';
+import { HASHING_SHARE, type HashingChapter } from '@/core/sha256/share';
 
-import { AvalancheView } from './components/AvalancheView';
-import { HmacView } from './components/HmacView';
 import { Sha256View } from './components/Sha256View';
-import { HASHING_PAGE_CITATIONS } from './citations';
 import { HASHING_CHAPTER_LIST, HASHING_META } from './meta';
-import { hashingRunFor, type HashingEvent } from './runs';
+import { HASHING_SHA256_CITATIONS } from './sha256Citations';
+import { sha256RunFor } from './sha256Run';
+import type { HashingEvent } from './runs';
 
 const DEFAULTS = HASHING_SHARE.defaults.input;
 const EMPTY_RUN = createRun<HashingEvent>().finish();
+
+/**
+ * Every chapter's run builder, loaded right after hydration (SHA-256's is static).
+ * Free play's inputs come with it too: not through `next/dynamic`, whose loader alone
+ * costs more first-load JS than any of the forms (phase 10's budget).
+ */
+const loadRuns = () => import('./runs');
 
 function isDefaultInput(input: typeof DEFAULTS): boolean {
   return (
@@ -59,15 +59,23 @@ export function HashingModule({ walkthrough }: { walkthrough?: ReactNode }) {
   const [format, setFormat] = useByteFormat();
   const { markComplete, progress } = useProgress();
 
+  const runs = useDeferredImport(loadRuns);
+  const loading = chapter !== 'sha256' && runs === null;
   const result = useMemo(
-    () => hashingRunFor(chapter, mode, state.input) ?? EMPTY_RUN,
+    () =>
+      (chapter === 'sha256'
+        ? sha256RunFor(mode, state.input)
+        : runs
+          ? runs.hashingRunFor(chapter, mode, state.input)
+          : null) ?? EMPTY_RUN,
     // `state.step` changes on every step and must not rebuild the run.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [chapter, mode, state.input.message, state.input.key, state.input.bit],
+    [chapter, mode, state.input.message, state.input.key, state.input.bit, runs],
   );
 
   const view = useRunView(result, {
-    initialStep: linked?.step,
+    // Held back until the run exists, or a link's step would land on an empty run.
+    initialStep: loading ? undefined : linked?.step,
     onStep: (step) =>
       setState((current) => (current.step === step ? current : { ...current, step })),
   });
@@ -98,7 +106,7 @@ export function HashingModule({ walkthrough }: { walkthrough?: ReactNode }) {
 
   return (
     <ModuleLayout
-      citations={HASHING_PAGE_CITATIONS}
+      citations={runs?.HASHING_PAGE_CITATIONS ?? HASHING_SHA256_CITATIONS}
       title={HASHING_META.title}
       intro={HASHING_META.intro}
       mode={mode}
@@ -122,14 +130,14 @@ export function HashingModule({ walkthrough }: { walkthrough?: ReactNode }) {
             <ChapterContext.Provider value={chapter}>
               {walkthrough}
             </ChapterContext.Provider>
-          ) : (
-            <FreePlayInputs
+          ) : runs ? (
+            <runs.FreePlayInputs
               chapter={chapter}
               input={state.input}
               onChange={setInput}
               shareable={share.shareable}
             />
-          )}
+          ) : null}
         </>
       }
       inspector={
@@ -172,15 +180,16 @@ export function HashingModule({ walkthrough }: { walkthrough?: ReactNode }) {
       </div>
       {!event ? (
         <p className="text-fg-muted">
-          Type a message with at least {Math.floor(state.input.bit / 8) + 1} bytes to flip
-          bit {state.input.bit}.
+          {loading
+            ? 'Loading this chapter…'
+            : `Type a message with at least ${Math.floor(state.input.bit / 8) + 1} bytes to flip bit ${state.input.bit}.`}
         </p>
-      ) : event.kind === 'sha256.avalanche' ? (
-        <AvalancheView event={event} />
-      ) : event.kind.startsWith('sha256.') ? (
+      ) : event.kind.startsWith('sha256.') && event.kind !== 'sha256.avalanche' ? (
         <Sha256View event={event as Sha256Event} format={format} />
+      ) : !runs ? null : event.kind === 'sha256.avalanche' ? (
+        <runs.AvalancheView event={event} />
       ) : (
-        <HmacView event={event as HmacEvent} format={format} />
+        <runs.HmacView event={event as HmacEvent} format={format} />
       )}
       {mode === 'walkthrough' && view.atEnd && !lastChapter ? (
         <button
@@ -198,76 +207,5 @@ export function HashingModule({ walkthrough }: { walkthrough?: ReactNode }) {
         </p>
       ) : null}
     </ModuleLayout>
-  );
-}
-
-function FreePlayInputs({
-  chapter,
-  input,
-  onChange,
-  shareable,
-}: {
-  chapter: HashingChapter;
-  input: typeof DEFAULTS;
-  onChange: (patch: Partial<typeof DEFAULTS>) => void;
-  shareable: boolean;
-}) {
-  const id = useId();
-  const field =
-    'border-border bg-surface focus-visible:outline-focus w-full rounded-md border px-2 py-1.5 font-mono focus-visible:outline-2';
-  const bits = utf8Encode(input.message).length * 8;
-
-  return (
-    <div className="border-border bg-surface grid gap-3 rounded-lg border p-3 sm:grid-cols-2">
-      <label className="flex flex-col gap-1 text-sm" htmlFor={`${id}-message`}>
-        Message (up to {MAX_STEPPED_BYTES} bytes, three blocks)
-        <input
-          id={`${id}-message`}
-          className={field}
-          value={input.message}
-          onChange={(e) =>
-            utf8Encode(e.target.value).length <= MAX_STEPPED_BYTES &&
-            onChange({ message: e.target.value })
-          }
-        />
-      </label>
-      {chapter === 'avalanche' ? (
-        <label className="flex flex-col gap-1 text-sm" htmlFor={`${id}-bit`}>
-          Bit to flip (0 to {Math.max(0, bits - 1)}, from the left)
-          <input
-            id={`${id}-bit`}
-            type="number"
-            min={0}
-            max={Math.max(0, bits - 1)}
-            className={field}
-            value={input.bit}
-            onChange={(e) => {
-              const bit = Number(e.target.value);
-              if (Number.isInteger(bit) && bit >= 0 && bit < MAX_STEPPED_BYTES * 8)
-                onChange({ bit });
-            }}
-          />
-        </label>
-      ) : null}
-      {chapter === 'hmac' ? (
-        <label className="flex flex-col gap-1 text-sm" htmlFor={`${id}-key`}>
-          MAC key (up to {MAX_HMAC_KEY_BYTES} bytes; over 64 gets hashed first)
-          <input
-            id={`${id}-key`}
-            className={field}
-            value={input.key}
-            onChange={(e) =>
-              utf8Encode(e.target.value).length <= MAX_HMAC_KEY_BYTES &&
-              onChange({ key: e.target.value })
-            }
-          />
-        </label>
-      ) : null}
-      {!shareable ? (
-        <p className="text-warn text-sm sm:col-span-2">
-          This state is too large for a share link.
-        </p>
-      ) : null}
-    </div>
   );
 }

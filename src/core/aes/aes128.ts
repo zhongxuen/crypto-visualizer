@@ -13,13 +13,16 @@
  *
  * `decryptBlock` is the inverse cipher (§5.3), fast path only: the UI describes
  * decryption as the same steps run backwards.
+ *
+ * The key schedule's run (`./keyScheduleRun`) and the avalanche run (`./avalanche`) are
+ * in their own files, so the first screen of the AES page doesn't ship their step text.
  */
 
 import { bytesToHex } from '../bytes/hex';
-import { createRun, type RunBuilder } from '../events/builder';
+import { createRun } from '../events/builder';
 import type { SimResult } from '../sim/result';
 import type { AesEvent } from './events';
-import { expandKey, expandKeyBytes, ROUNDS, type KeyWordTrace } from './keyExpansion';
+import { expandKeyBytes, ROUNDS } from './keyExpansion';
 import {
   addRoundKey,
   BLOCK_BYTES,
@@ -42,7 +45,7 @@ export type CipherTrace = (
   after: Uint8Array,
 ) => void;
 
-function assertBlock(block: Uint8Array, name = 'block'): void {
+export function assertBlock(block: Uint8Array, name = 'block'): void {
   if (block.length !== BLOCK_BYTES) {
     throw new RangeError(`AES takes a ${BLOCK_BYTES}-byte ${name}, got ${block.length}`);
   }
@@ -133,7 +136,8 @@ export function decryptBlock(key: Uint8Array, block: Uint8Array): Uint8Array {
   return decryptWithRoundKeys(expandKeyBytes(key), block);
 }
 
-const changedCells = (before: Uint8Array, after: Uint8Array) => {
+/** Which of the 16 state bytes differ. */
+export const changedCells = (before: Uint8Array, after: Uint8Array) => {
   const changed: number[] = [];
   for (let i = 0; i < BLOCK_BYTES; i += 1) if (before[i] !== after[i]) changed.push(i);
   return changed;
@@ -271,153 +275,4 @@ function encryptStepped(key: Uint8Array, block: Uint8Array): AesBlockRun {
   );
 
   return { ciphertext: state, result: run.finish() };
-}
-
-const hex32 = (word: number) => word.toString(16).padStart(8, '0');
-
-/** Key expansion, stepped: one event per word, grouped by round key. */
-export function keyExpansionRun(key: Uint8Array): SimResult<AesEvent> {
-  const traces: KeyWordTrace[] = [];
-  const w = expandKey(key, (step) => traces.push(step));
-  const run = createRun<AesEvent>();
-  for (let r = 0; r <= ROUNDS; r += 1) {
-    run.group(
-      `Round key ${r}`,
-      () => {
-        for (const t of traces.slice(4 * r, 4 * r + 4)) emitKeyWord(run, t, w);
-      },
-      {
-        id: `key-${r}`,
-        description:
-          r === 0
-            ? 'The key itself is w0 to w3.'
-            : `w${4 * r} to w${4 * r + 3}: the first uses RotWord, SubWord and Rcon.`,
-      },
-    );
-  }
-  return run.finish();
-}
-
-function emitKeyWord(run: RunBuilder<AesEvent>, t: KeyWordTrace, w: Uint32Array): void {
-  const base = {
-    kind: 'aes.keyWord' as const,
-    id: `aes.key.w${t.i}`,
-    citation: 'fips197.5.2',
-    i: t.i,
-    word: t.word,
-    temp: t.temp,
-    back: t.back,
-    words: Array.from(w.subarray(0, t.i + 1)),
-  };
-  if (t.i < 4) {
-    run.step({
-      ...base,
-      label: `w${t.i} = ${hex32(t.word)}: key bytes ${4 * t.i}–${4 * t.i + 3}.`,
-    });
-  } else if (t.rot !== undefined) {
-    run.step({
-      ...base,
-      rot: t.rot,
-      sub: t.sub,
-      rcon: t.rcon,
-      afterRcon: t.afterRcon,
-      label: `w${t.i} = w${t.i - 4} ⊕ SubWord(RotWord(w${t.i - 1})) ⊕ Rcon[${t.i / 4}] = ${hex32(t.word)}.`,
-      detail: `RotWord(${hex32(t.temp)}) = ${hex32(t.rot)}; SubWord = ${hex32(t.sub ?? 0)}; ⊕ Rcon ${hex32(t.rcon ?? 0)} = ${hex32(t.afterRcon ?? 0)}. Without this twist every round key would be a linear function of the key.`,
-    });
-  } else {
-    run.step({
-      ...base,
-      label: `w${t.i} = w${t.i - 4} ⊕ w${t.i - 1} = ${hex32(t.back)} ⊕ ${hex32(t.temp)} = ${hex32(t.word)}.`,
-    });
-  }
-}
-
-/** Flip bit `bit` (0 = most significant bit of byte 0) of a copy of `block`. */
-export function flipBlockBit(block: Uint8Array, bit: number): Uint8Array {
-  if (!Number.isInteger(bit) || bit < 0 || bit >= block.length * 8) {
-    throw new RangeError(`No bit ${bit} in a ${block.length}-byte block`);
-  }
-  const out = Uint8Array.from(block);
-  out[bit >> 3] ^= 0x80 >> (bit & 7);
-  return out;
-}
-
-function countBits(a: Uint8Array, b: Uint8Array): number {
-  let count = 0;
-  for (let i = 0; i < a.length; i += 1) {
-    let x = a[i] ^ b[i];
-    while (x) {
-      count += x & 1;
-      x >>= 1;
-    }
-  }
-  return count;
-}
-
-/** The state at the end of each round 0–10 (after its AddRoundKey). */
-export function roundStates(key: Uint8Array, block: Uint8Array): Uint8Array[] {
-  assertBlock(block);
-  const states: Uint8Array[] = [];
-  cipher(block.slice(), expandKeyBytes(key), (op, _round, _before, after) => {
-    if (op === 'addRoundKey') states.push(after);
-  });
-  return states;
-}
-
-/** Encrypt `block` and `block` with one bit flipped; compare the states round by round. */
-export function avalancheRun(
-  key: Uint8Array,
-  block: Uint8Array,
-  bit: number,
-): SimResult<AesEvent> {
-  const flippedBlock = flipBlockBit(block, bit);
-  const a = roundStates(key, block);
-  const b = roundStates(key, flippedBlock);
-  const run = createRun<AesEvent>();
-  run.group(
-    'Avalanche',
-    () => {
-      run.step({
-        kind: 'aes.avalanche',
-        stage: 'flip',
-        id: 'aes.avalanche.flip',
-        label: `Flip one plaintext bit: bit ${bit % 8} of byte ${(bit >> 3) + 1}.`,
-        citation: 'webster-tavares1985',
-        round: -1,
-        bit,
-        stateA: Array.from(block),
-        stateB: Array.from(flippedBlock),
-        changed: changedCells(block, flippedBlock),
-        flipped: 1,
-      });
-      for (let round = 0; round <= ROUNDS; round += 1) {
-        const flipped = countBits(a[round], b[round]);
-        const changed = changedCells(a[round], b[round]);
-        run.step({
-          kind: 'aes.avalanche',
-          stage: 'round',
-          id: `aes.avalanche.r${round}`,
-          label: `After round ${round}: ${flipped} of 128 bits differ, in ${changed.length} of 16 bytes.`,
-          detail:
-            round === 0
-              ? 'AddRoundKey XORs the same key into both, so the difference is still one bit.'
-              : round <= 2
-                ? 'SubBytes spreads a difference across its byte, ShiftRows and MixColumns spread it across the state.'
-                : 'By now each output bit flips with probability about one half: the full avalanche.',
-          citation: round === 0 ? 'fips197.5.1.4' : 'fips197.5.1',
-          round,
-          bit,
-          stateA: Array.from(a[round]),
-          stateB: Array.from(b[round]),
-          changed,
-          flipped,
-        });
-      }
-    },
-    {
-      id: 'avalanche',
-      description: 'One plaintext bit flipped, followed round by round.',
-    },
-  );
-  return run.finish();
 }

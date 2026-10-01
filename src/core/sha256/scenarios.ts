@@ -1,6 +1,7 @@
 import { utf8Encode } from '../bytes/utf8';
 import type { Scenario } from '../scenarios';
-import { avalancheRun, sha256Run } from './sha256';
+import { avalancheRun } from './avalanche';
+import { sha256Run } from './run';
 
 /** FIPS 180-4 example messages (NIST's SHA-256 examples, one and two blocks). */
 export const SHA256_EXAMPLES = {

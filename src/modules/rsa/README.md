@@ -7,6 +7,10 @@ Renders the runs in `src/core/rsa`. It computes nothing itself.
   uses the hand-worked p = 61, q = 53, e = 17 (so d = 2753), m = 65 and the message "Pay
   Bob 10". Free play has the paper/realistic toggle. Paper mode takes your p, q and e;
   realistic mode draws 128- to 512-bit primes from the seed.
+- `keysRun.ts` + `keysCitations.ts`: the keys chapter's run and citations, in the first
+  load. `runs.ts` brings everything else after hydration: the other chapters' runs and
+  views (`components/ChapterViews.tsx`, `MalleabilityStrip.tsx`), the full citation
+  registry and free play's form.
 - `components/Inputs.tsx`: the free-play inputs. The prime pickers say "is it prime?" as
   you type, using core's trial division (for example "p = 91 is not prime: 7 × 13").
 - `components/FormulaPanel.tsx`: n = p × q, φ(n), e, d, then c, m or h, s. Each fills in

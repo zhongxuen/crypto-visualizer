@@ -6,7 +6,8 @@ import { ByteGrid, type ByteFormat } from '@/components/blocks';
 import { BUTTON } from '@/components/timeline';
 import { bytesToHex } from '@/core/bytes/hex';
 import type { HmacEvent, HmacHashEvent } from '@/core/hmac/events';
-import { MAX_STEPPED_BYTES, sha256Run } from '@/core/sha256/sha256';
+import { sha256Run } from '@/core/sha256/run';
+import { MAX_STEPPED_BYTES } from '@/core/sha256/sha256';
 
 const hex = (bytes: readonly number[]) => bytesToHex(Uint8Array.from(bytes));
 

@@ -7,16 +7,14 @@ import { utf8Encode } from '@/core/bytes/utf8';
 import { H0, K } from '@/core/sha256/constants';
 import type { Sha256Event } from '@/core/sha256/events';
 import { padMessage, zeroPadLength } from '@/core/sha256/pad';
+import { avalancheRun, flipBit } from '@/core/sha256/avalanche';
+import { sha256Run, sha256Stepped } from '@/core/sha256/run';
 import {
-  avalancheRun,
-  flipBit,
   initialState,
   MAX_STEPPED_BYTES,
   sha256,
   sha256Block,
   sha256Finish,
-  sha256Run,
-  sha256Stepped,
 } from '@/core/sha256/sha256';
 import { createRng } from '@/core/sim/rng';
 

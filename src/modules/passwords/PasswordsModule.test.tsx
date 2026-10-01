@@ -24,7 +24,9 @@ function everythingStored(): string {
   return parts.join('\n');
 }
 
-describe('PasswordsModule privacy', () => {
+// Each test waits for code the page loads after hydration; under a loaded parallel run
+// (`npm run verify` with coverage) that can pass the 5 s default.
+describe('PasswordsModule privacy', { timeout: 20_000 }, () => {
   beforeEach(() => {
     vi.useFakeTimers();
     localStorage.clear();
@@ -35,7 +37,8 @@ describe('PasswordsModule privacy', () => {
 
   it('never puts a typed password in the URL or in storage', async () => {
     render(<PasswordsModule />);
-    // The share-state schema and the PBKDF2 chapter load after hydration; wait for both.
+    // The share-state schema and `./runs` (the PBKDF2 chapter and free play's inputs) load
+    // after hydration; wait for both.
     await act(async () => {
       await Promise.all([PASSWORDS_SHARE.load(), import('./runs')]);
     });
@@ -72,6 +75,8 @@ describe('PasswordsModule privacy', () => {
     vi.useRealTimers();
     const { container } = render(<PasswordsModule />);
     fireEvent.click(screen.getByRole('button', { name: 'Free play' }));
+    // Free play's inputs come with `./runs`, loaded after hydration.
+    await screen.findByLabelText('Try your own password');
     await expectNoAxeViolations(container);
   });
 });

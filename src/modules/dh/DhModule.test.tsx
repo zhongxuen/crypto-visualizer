@@ -21,7 +21,7 @@ const steps = (n: number) => {
 
 /**
  * Renders the page and waits for what it loads after hydration: the non-paint chapters'
- * runs (`useDeferredImport`) and the views behind `next/dynamic`.
+ * runs and views, and free play's inputs (`./runs`, `useDeferredImport`).
  */
 async function renderLoaded() {
   const rendered = render(<DhModule />);
@@ -36,7 +36,9 @@ async function renderLoaded() {
   return rendered;
 }
 
-describe('DhModule', () => {
+// Each test waits for code the page loads after hydration; under a loaded parallel run
+// (`npm run verify` with coverage) that can pass the 5 s default.
+describe('DhModule', { timeout: 20_000 }, () => {
   beforeEach(() => {
     localStorage.clear();
     window.history.replaceState(null, '', '/dh');

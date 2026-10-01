@@ -14,6 +14,13 @@ import {
 } from './keysRun';
 
 export { keyInputFor, RSA_WALKTHROUGH } from './keysRun';
+// For the page, which loads this file after hydration (`useDeferredImport`): the views of
+// the encrypt, sign and malleability chapters. They render from the loaded module rather
+// than through `next/dynamic`, so nothing suspends while a learner steps.
+export { RSA_PAGE_CITATIONS } from './citations';
+export { ChapterPicture } from './components/ChapterViews';
+export { MalleabilityStrip } from './components/MalleabilityStrip';
+export { FreePlayInputs } from './components/Inputs';
 
 export interface RsaRun {
   result: SimResult<RsaEvent> | null;

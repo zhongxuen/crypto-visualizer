@@ -1,7 +1,6 @@
 'use client';
 
 import { ChevronRight, Eye } from 'lucide-react';
-import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { StepInspector } from '@/components/inspector';
@@ -27,20 +26,17 @@ import { DH_PAGE_CITATIONS } from './citations';
 import { DH_CHAPTER_LIST, DH_META } from './meta';
 import { paintRun } from './paintRun';
 
-// Free play's inputs load when free play is first opened, not in the route's first load
-// (phase 10's 170 KB budget). Walkthrough views stay static: a view that suspends while
-// a learner steps through can swallow an arrow-key press.
-const FreePlayInputs = dynamic(() =>
-  import('./components/Inputs').then((m) => m.FreePlayInputs),
-);
-
 type DhState = typeof DH_SHARE.defaults;
 type DhInput = DhState['input'];
 
 const DEFAULTS = DH_SHARE.defaults;
 const EMPTY_RUN = createRun<DhEvent>().finish();
 
-/** Every scene's run builder, loaded right after hydration (paint's is static). */
+/**
+ * Every scene's run builder, loaded right after hydration (paint's is static).
+ * Free play's inputs come with it too: not through `next/dynamic`, whose loader alone
+ * costs more first-load JS than any of the forms (phase 10's budget).
+ */
 const loadRuns = () => import('./runs');
 type Runs = Awaited<ReturnType<typeof loadRuns>>;
 
@@ -205,8 +201,8 @@ export function DhModule({ walkthrough }: { walkthrough?: ReactNode }) {
           />
           {mode === 'walkthrough' ? (
             <ChapterContext.Provider value={scene}>{walkthrough}</ChapterContext.Provider>
-          ) : (
-            <FreePlayInputs
+          ) : runs ? (
+            <runs.FreePlayInputs
               key={`${String(share.ready)}-${scene}`}
               scene={scene}
               input={state.input}
@@ -216,7 +212,7 @@ export function DhModule({ walkthrough }: { walkthrough?: ReactNode }) {
               onChange={setInput}
               onSeed={setSeed}
             />
-          )}
+          ) : null}
         </>
       }
       inspector={

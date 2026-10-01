@@ -1,7 +1,6 @@
 'use client';
 
 import { ChevronRight } from 'lucide-react';
-import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { StepInspector } from '@/components/inspector';
@@ -21,19 +20,9 @@ import { RSA_SHARE, type RsaChapter } from '@/core/rsa/share';
 
 import { EgcdView } from './components/EgcdView';
 import { FormulaPanel } from './components/FormulaPanel';
-import { MalleabilityStrip, PaddingView } from './components/MalleabilityStrip';
-import { PowResultView, PowStepView } from './components/PowView';
-import {
-  HashView,
-  KeyPairView,
-  MessageView,
-  ModulusView,
-  PrimeView,
-  PrivateView,
-  TamperView,
-} from './components/StepView';
+import { KeyPairView, ModulusView, PrimeView, PrivateView } from './components/StepView';
 import { Value } from './components/parts';
-import { RSA_PAGE_CITATIONS } from './citations';
+import { RSA_KEYS_CITATIONS } from './keysCitations';
 import { RSA_CHAPTER_LIST, RSA_META } from './meta';
 import { keysRunFor } from './keysRun';
 
@@ -43,15 +32,13 @@ type RsaInput = RsaState['input'];
 const DEFAULTS = RSA_SHARE.defaults;
 const EMPTY_RUN = createRun<RsaEvent>().finish();
 
-/** Every chapter's run builder, loaded right after hydration (keys' is static). */
+/**
+ * Every chapter's run builder, loaded right after hydration (keys' is static).
+ * Free play's inputs come with it too: not through `next/dynamic`, whose loader alone
+ * costs more first-load JS than any of the forms (phase 10's budget).
+ */
 const loadRuns = () => import('./runs');
-
-// Free play's inputs load when free play is first opened, not in the route's first load
-// (phase 10's 170 KB budget). Walkthrough views stay static: a view that suspends while
-// a learner steps through can swallow an arrow-key press.
-const FreePlayInputs = dynamic(() =>
-  import('./components/Inputs').then((m) => m.FreePlayInputs),
-);
+type Runs = Awaited<ReturnType<typeof loadRuns>>;
 
 function isDefaultInput(state: RsaState): boolean {
   const d = DEFAULTS.input;
@@ -67,8 +54,8 @@ function isDefaultInput(state: RsaState): boolean {
   );
 }
 
-/** The picture for one step. */
-function StepPicture({ event }: { event: RsaEvent }) {
+/** The picture for one step: the keys chapter's views are static, the rest come with `runs`. */
+function StepPicture({ event, runs }: { event: RsaEvent; runs: Runs | null }) {
   switch (event.kind) {
     case 'rsa.prime':
       return <PrimeView event={event} />;
@@ -97,20 +84,8 @@ function StepPicture({ event }: { event: RsaEvent }) {
       return <PrivateView event={event} />;
     case 'rsa.keyPair':
       return <KeyPairView event={event} />;
-    case 'rsa.message':
-      return <MessageView event={event} />;
-    case 'rsa.powStep':
-      return <PowStepView event={event} />;
-    case 'rsa.powResult':
-      return <PowResultView event={event} />;
-    case 'rsa.hash':
-      return <HashView event={event} />;
-    case 'rsa.tamper':
-      return <TamperView event={event} />;
-    case 'rsa.padding':
-      return <PaddingView scheme={event.scheme} />;
     default:
-      return null;
+      return runs ? <runs.ChapterPicture event={event} /> : null;
   }
 }
 
@@ -180,7 +155,7 @@ export function RsaModule({ walkthrough }: { walkthrough?: ReactNode }) {
 
   return (
     <ModuleLayout
-      citations={RSA_PAGE_CITATIONS}
+      citations={runs?.RSA_PAGE_CITATIONS ?? RSA_KEYS_CITATIONS}
       title={RSA_META.title}
       intro={RSA_META.intro}
       mode={mode}
@@ -201,8 +176,8 @@ export function RsaModule({ walkthrough }: { walkthrough?: ReactNode }) {
             <ChapterContext.Provider value={chapter}>
               {walkthrough}
             </ChapterContext.Provider>
-          ) : (
-            <FreePlayInputs
+          ) : runs ? (
+            <runs.FreePlayInputs
               key={`${String(share.ready)}-${state.input.mode}`}
               chapter={chapter}
               input={state.input}
@@ -212,7 +187,7 @@ export function RsaModule({ walkthrough }: { walkthrough?: ReactNode }) {
               onChange={setInput}
               onSeed={setSeed}
             />
-          )}
+          ) : null}
         </>
       }
       inspector={
@@ -246,14 +221,14 @@ export function RsaModule({ walkthrough }: { walkthrough?: ReactNode }) {
         </p>
       ) : chapter === 'malleability' ? (
         <>
-          <MalleabilityStrip events={events} index={view.index} />
+          {runs ? <runs.MalleabilityStrip events={events} index={view.index} /> : null}
           {event.kind === 'rsa.keyPair' || event.kind === 'rsa.padding' ? (
-            <StepPicture event={event} />
+            <StepPicture event={event} runs={runs} />
           ) : null}
         </>
       ) : (
         <>
-          <StepPicture event={event} />
+          <StepPicture event={event} runs={runs} />
           <FormulaPanel chapter={chapter} events={events} index={view.index} />
         </>
       )}

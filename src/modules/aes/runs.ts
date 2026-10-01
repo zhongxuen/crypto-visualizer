@@ -1,4 +1,5 @@
-import { avalancheRun, keyExpansionRun } from '@/core/aes/aes128';
+import { avalancheRun } from '@/core/aes/avalanche';
+import { keyExpansionRun } from '@/core/aes/keyScheduleRun';
 import type { AesEvent } from '@/core/aes/events';
 import { cbcRun } from '@/core/aes/modes/cbc';
 import { ctrRun } from '@/core/aes/modes/ctr';
@@ -15,11 +16,13 @@ export { AES_WALKTHROUGH, aesInputs, inputProblem, type AesInputs } from './bloc
 // pixels and the views of every chapter but the block. They render from the loaded module
 // rather than through `next/dynamic`, so nothing suspends while a learner steps.
 export { penguinImages } from '@/core/aes/penguin';
+export { AES_PAGE_CITATIONS } from './citations';
 export { AvalancheView } from './components/AvalancheView';
 export { GcmView } from './components/GcmView';
 export { KeyScheduleView } from './components/KeyScheduleView';
 export { ModeView } from './components/ModeView';
 export { PenguinView } from './components/PenguinView';
+export { FreePlayInputs } from './components/Inputs';
 
 /** Which core run a chapter shows, or `null` when free play's input can't make one. */
 export function aesRunFor(

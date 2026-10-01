@@ -1,7 +1,9 @@
 import { hexToBytes } from '../bytes/hex';
 import { utf8Encode } from '../bytes/utf8';
 import type { Scenario } from '../scenarios';
-import { avalancheRun, encryptBlock, keyExpansionRun } from './aes128';
+import { encryptBlock } from './aes128';
+import { avalancheRun } from './avalanche';
+import { keyExpansionRun } from './keyScheduleRun';
 import { cbcRun } from './modes/cbc';
 import { ctrRun } from './modes/ctr';
 import { ecbRun } from './modes/ecb';

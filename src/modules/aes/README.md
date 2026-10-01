@@ -6,6 +6,9 @@ Renders the runs in `src/core/aes`; computes nothing itself.
   schedule (Appendix A.1's key), avalanche, modes (ECB / CBC / CTR, picked above the
   lesson), the ECB penguin and GCM (described only). Free play takes a hex key, a hex
   block or a message, the bit to flip and the IV/nonce seed.
+- `blockRun.ts` + `blockCitations.ts`: the block chapter's run and citations, in the
+  first load. `runs.ts` brings the other chapters' runs and views, the full citation
+  registry and free play's form (`components/Inputs.tsx`) after hydration.
 - `components/BlockView.tsx`: the 4×4 state per sub-step. SubBytes with the 16×16
   S-box table (`SboxTable.tsx`) and the field-inverse/affine working for a chosen byte,
   ShiftRows as row-by-row rotations with arrows, MixColumns with a chosen column
