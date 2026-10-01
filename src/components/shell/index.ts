@@ -8,3 +8,4 @@ export {
 export { SiteFooter } from './SiteFooter';
 export { SiteHeader } from './SiteHeader';
 export { applyTheme, THEME_SCRIPT, ThemeToggle } from './ThemeToggle';
+export { SiteAnalytics } from './SiteAnalytics';
