@@ -18,11 +18,13 @@ import { Pbkdf2View } from './Pbkdf2View';
  */
 export function Pbkdf2Chapter({
   event,
+  step,
   format,
   run,
   request,
 }: {
   event: KdfEvent;
+  step: number;
   format: ByteFormat;
   /** The run on screen: a new one forgets the last full computation. */
   run: SimResult<KdfEvent>;
@@ -32,9 +34,13 @@ export function Pbkdf2Chapter({
   const job = usePbkdf2Worker();
   const { reset } = job;
   useEffect(() => reset(), [run, reset]);
+  const setup = run.events[0];
+  const total = setup?.kind === 'kdf.pbkdfSetup' ? setup.iterations : 0;
   return (
     <Pbkdf2View
       event={event}
+      step={step}
+      total={total}
       format={format}
       job={job}
       onStart={() => job.start(request())}

@@ -1,5 +1,6 @@
 'use client';
 
+import { TriangleAlert } from 'lucide-react';
 import { useId } from 'react';
 
 import { PBKDF2_EXAMPLES, type PasswordsChapter } from '@/core/kdf/share';
@@ -44,10 +45,19 @@ export function FreePlayInputs({
           aria-describedby={`${id}-own-note`}
           data-private=""
         />
-        <p id={`${id}-own-note`} className="text-warn text-xs">
-          Don’t type a real password. It stays in this page’s memory only: it is never put
-          in the link, in your browser’s storage or in analytics, and a share link won’t
-          include it.
+        <p
+          id={`${id}-own-note`}
+          className="border-warn text-fg bg-surface-overlay flex gap-2 rounded-md border-l-4 px-3 py-2 text-sm"
+        >
+          <TriangleAlert
+            aria-hidden="true"
+            className="text-warn mt-0.5 size-4 shrink-0"
+          />
+          <span>
+            <strong className="font-semibold">Don’t type a real password.</strong> It
+            stays in this page’s memory only: it is never put in the link, in your
+            browser’s storage or in analytics, and a share link won’t include it.
+          </span>
         </p>
       </div>
       {chapter === 'lookup' || chapter === 'salt' ? (
@@ -68,7 +78,7 @@ export function FreePlayInputs({
             Built-in example {typed ? '(its salt is used with your password)' : ''}
             <select
               id={`${id}-example`}
-              className={field}
+              className="border-border bg-surface focus-visible:outline-focus w-full rounded-md border px-2 py-1.5 font-sans focus-visible:outline-2"
               value={input.exampleId}
               onChange={(e) =>
                 onChange({ exampleId: e.target.value as Input['exampleId'] })
