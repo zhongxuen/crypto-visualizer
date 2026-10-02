@@ -205,6 +205,63 @@ body,
   animation-delay: calc(var(--i, 0) * var(--wave-stagger, 8ms));
 }
 
+/* The home page's hero demo: a highlighter that walks the seven stages every six
+   seconds. Every stage is always visible; the walk only points at them. It stops off
+   screen (`data-paused`), and reduced motion (below) leaves it unrun. */
+@keyframes cv-demo {
+  0%,
+  14% {
+    background-color: var(--highlight);
+    border-color: var(--border-strong);
+  }
+  15%,
+  100% {
+    background-color: var(--surface);
+  }
+}
+.xor-demo-stage {
+  animation: cv-demo 6s linear infinite;
+  animation-delay: calc(var(--i, 0) * 6s / 7);
+}
+.xor-demo[data-paused] .xor-demo-stage {
+  animation-play-state: paused;
+}
+
+/* The learning path's connectors: down the node column on a phone, across a row of
+   four from lg. Decorative. */
+.learning-path > li::after {
+  content: '';
+  position: absolute;
+  background: var(--border-strong);
+}
+.learning-path > li:last-child::after {
+  display: none;
+}
+@media (max-width: 767.98px) {
+  .learning-path > li::after {
+    left: calc(1.25rem + 21px);
+    top: 100%;
+    width: 2px;
+    height: 1rem;
+  }
+}
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .learning-path > li::after {
+    display: none;
+  }
+}
+@media (min-width: 1024px) {
+  .learning-path > li::after {
+    top: calc(1.25rem + 21px);
+    left: 100%;
+    width: 1.5rem;
+    height: 2px;
+  }
+  .learning-path > li:nth-child(4n)::after {
+    display: none;
+  }
+}
+
 /* Reduced motion: no tweening anywhere. Step changes are instant. */
 @media (prefers-reduced-motion: reduce) {
   *,

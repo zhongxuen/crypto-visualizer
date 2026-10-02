@@ -24,6 +24,10 @@ export interface ModuleEntry {
   status: ModuleStatus;
   /** 1 = v1, 2 = phase 2 (TLS 1.3). */
   phase: 1 | 2;
+  /** Roughly how long the walkthrough takes, in minutes, for the learning path. */
+  minutes: number;
+  /** Slugs of the modules whose ideas this one uses (the learning path's "builds on"). */
+  buildsOn: readonly string[];
 }
 
 export const MODULES: readonly ModuleEntry[] = [
@@ -36,6 +40,8 @@ export const MODULES: readonly ModuleEntry[] = [
     number: 1,
     status: 'ready',
     phase: 1,
+    minutes: 10,
+    buildsOn: [],
   },
   {
     slug: 'hashing',
@@ -46,6 +52,8 @@ export const MODULES: readonly ModuleEntry[] = [
     number: 2,
     status: 'ready',
     phase: 1,
+    minutes: 20,
+    buildsOn: ['xor'],
   },
   {
     slug: 'passwords',
@@ -56,6 +64,8 @@ export const MODULES: readonly ModuleEntry[] = [
     number: 3,
     status: 'ready',
     phase: 1,
+    minutes: 15,
+    buildsOn: ['hashing'],
   },
   {
     slug: 'aes',
@@ -66,6 +76,8 @@ export const MODULES: readonly ModuleEntry[] = [
     number: 4,
     status: 'ready',
     phase: 1,
+    minutes: 20,
+    buildsOn: ['xor'],
   },
   {
     slug: 'rsa',
@@ -76,6 +88,8 @@ export const MODULES: readonly ModuleEntry[] = [
     number: 5,
     status: 'ready',
     phase: 1,
+    minutes: 20,
+    buildsOn: ['hashing'],
   },
   {
     slug: 'dh',
@@ -86,6 +100,8 @@ export const MODULES: readonly ModuleEntry[] = [
     number: 6,
     status: 'ready',
     phase: 1,
+    minutes: 15,
+    buildsOn: ['rsa'],
   },
   {
     slug: 'tls',
@@ -96,5 +112,7 @@ export const MODULES: readonly ModuleEntry[] = [
     number: 7,
     status: 'planned',
     phase: 2,
+    minutes: 25,
+    buildsOn: ['hashing', 'aes', 'dh'],
   },
 ];

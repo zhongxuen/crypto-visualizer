@@ -44,7 +44,7 @@ export default function AboutPage() {
         </li>
       </ul>
 
-      <h2>How the maths is checked</h2>
+      <h2 id="how-the-maths-is-checked">How the maths is checked</h2>
       <p>
         Every algorithm is written by hand in plain TypeScript: no crypto library, no Web
         Crypto, not even the browser&apos;s text encoder. A lint rule forbids importing

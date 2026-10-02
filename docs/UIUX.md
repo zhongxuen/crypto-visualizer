@@ -1,7 +1,7 @@
 # Crypto Visualizer — UI/UX and motion plan
 
 Written: 2026-10-01
-Status: **[planned]**
+Status: **[in progress]** — waves 0 and 1 done (2026-10-02); wave 2 next.
 Applies to: every route in `src/app`, every shared component in `src/components`, every
 module in `src/modules`. Core (`src/core`) is not touched by this plan.
 
@@ -515,10 +515,20 @@ change goes in a wave 1 follow-up.
 | Wave | Prompts | Runs | Depends on |
 |---|---|---|---|
 | W0 — fix | U0.1 bugs, U0.2 bundle budget | serial | — |
-| W1 — foundation | U1.1 theme + type + motion primitives, U1.2 shell + workspace layout, U1.3 home page | serial | W0 |
+| W1 — foundation **(done)** | U1.1 theme + type + motion primitives, U1.2 shell + workspace layout, U1.3 home page | serial | W0 |
 | W2 — modules | U2.1 XOR, U2.2 Hashing, U2.3 Passwords, U2.4 AES, U2.5 RSA, U2.6 DH | **parallel (6)** | W1 |
 | W3 — site | U3.1 learning path + glossary, U3.2 about + 404 | serial | W2 |
 | W4 — QA + release | U4.1 QA pass, U4.2 deploy | serial | W3 |
+
+**Wave 1 notes (2026-10-02).** `cn` is now a plain class join: tailwind-merge (8.4 KB on
+every route) is a dev dependency only, and `tests/setup.ts` fails any rendered `cn` call
+that would have needed merging (CLAUDE.md). That paid for the new shell: module routes
+are /aes 166.3, /rsa 166.0, /passwords 164.6, /hashing 164.4, /xor 164.2, /dh 164.1 KB,
+and `/` is 141.1 KB, all below their pre-wave sizes. B5 is fixed for Σ, σ and φ
+(JetBrains Mono's Greek subset); Google's subsets carry no ⊕ or ≡, so those two still
+use a system font. Module pages now pass their pieces to `ModuleLayout`'s slots
+(`chapters`, `tools`, `lesson`, `controls`, `step`, `share`); wave 2 builds on those, on
+`src/components/motion` and on `<Term>`.
 
 Acceptance for every prompt: `npm run verify` passes, including `perf:bundles` (no route
 over 170 KB); `npm run test:e2e` passes (axe in both themes, keyboard, reduced motion);
