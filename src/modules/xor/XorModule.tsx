@@ -1,13 +1,13 @@
 'use client';
 
-import { ChevronRight, RefreshCw } from 'lucide-react';
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { ChevronRight } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { HexBinToggle, useByteFormat } from '@/components/blocks';
 import { StepInspector } from '@/components/inspector';
 import { ChapterContext, ChapterTabs } from '@/components/lesson';
 import { ModuleLayout, type ModuleMode } from '@/components/shell';
-import { useProgress, useShareState } from '@/components/state';
+import { useDeferredImport, useProgress, useShareState } from '@/components/state';
 import {
   BUTTON,
   PhaseStepper,
@@ -15,16 +15,24 @@ import {
   TimelineBar,
   useRunView,
 } from '@/components/timeline';
-import { utf8Encode } from '@/core/bytes/utf8';
-import { MAX_TEXT_BYTES } from '@/core/xor/encode';
+import { createRun } from '@/core/events/builder';
+import type { XorEvent } from '@/core/xor/events';
 import { XOR_SHARE, type XorChapter } from '@/core/xor/share';
 
-import { XorEventView } from './components/XorEventView';
+import { bytesRunFor } from './bytesRun';
+import { BytesView } from './components/BytesView';
+import { PhaseContext } from './components/Phase';
 import { XOR_PAGE_CITATIONS } from './citations';
 import { XOR_CHAPTER_LIST, XOR_META } from './meta';
-import { xorRunFor } from './runs';
 
 const DEFAULTS = XOR_SHARE.defaults.input;
+const EMPTY_RUN = createRun<XorEvent>().finish();
+
+/**
+ * The later chapters' runs and views, and free play's inputs, loaded right after
+ * hydration (the first chapter's are static), to keep the route inside its JS budget.
+ */
+const loadRuns = () => import('./runs');
 
 function isDefaultInput(input: typeof DEFAULTS): boolean {
   return input.a === DEFAULTS.a && input.b === DEFAULTS.b && input.crib === DEFAULTS.crib;
@@ -46,15 +54,23 @@ export function XorModule({ walkthrough }: { walkthrough?: ReactNode }) {
   const [format, setFormat] = useByteFormat();
   const { markComplete, progress } = useProgress();
 
+  const runs = useDeferredImport(loadRuns);
+  const loading = chapter !== 'bytes' && runs === null;
   const result = useMemo(
-    () => xorRunFor(chapter, mode, state),
+    () =>
+      chapter === 'bytes'
+        ? bytesRunFor(mode, state)
+        : runs
+          ? runs.xorRunFor(chapter, mode, state)
+          : EMPTY_RUN,
     // `state.step` changes on every step and must not rebuild the run.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [chapter, mode, state.seed, state.input.a, state.input.b, state.input.crib],
+    [chapter, mode, state.seed, state.input.a, state.input.b, state.input.crib, runs],
   );
 
   const view = useRunView(result, {
-    initialStep: linked?.step,
+    // Held back until the run exists, or a link's step would land on an empty run.
+    initialStep: loading ? undefined : linked?.step,
     onStep: (step) =>
       setState((current) => (current.step === step ? current : { ...current, step })),
   });
@@ -81,6 +97,7 @@ export function XorModule({ walkthrough }: { walkthrough?: ReactNode }) {
     }));
 
   const event = view.event;
+  const phaseId = result.phases[view.phaseIndex]?.id ?? null;
 
   return (
     <ModuleLayout
@@ -106,11 +123,13 @@ export function XorModule({ walkthrough }: { walkthrough?: ReactNode }) {
       }
       tools={<HexBinToggle value={format} onChange={setFormat} />}
       lesson={
-        <ChapterContext.Provider value={chapter}>{walkthrough}</ChapterContext.Provider>
+        <ChapterContext.Provider value={chapter}>
+          <PhaseContext.Provider value={phaseId}>{walkthrough}</PhaseContext.Provider>
+        </ChapterContext.Provider>
       }
       controls={
-        mode === 'free' ? (
-          <FreePlayInputs
+        mode === 'free' && runs ? (
+          <runs.FreePlayInputs
             chapter={chapter}
             input={state.input}
             onChange={setInput}
@@ -143,7 +162,23 @@ export function XorModule({ walkthrough }: { walkthrough?: ReactNode }) {
         group={event?.group}
         label={event?.label}
       />
-      {event ? <XorEventView event={event} format={format} /> : null}
+      {event === undefined ? null : event.kind === 'xor.char' ||
+        (chapter === 'bytes' && event.kind === 'xor.message') ? (
+        <BytesView
+          event={event}
+          format={format}
+          events={result.events}
+          index={view.index}
+        />
+      ) : runs ? (
+        <runs.XorEventView
+          event={event}
+          format={format}
+          events={result.events}
+          index={view.index}
+          onSeekStep={(index) => view.store.getState().seekStep(index)}
+        />
+      ) : null}
       {mode === 'walkthrough' && view.atEnd && !lastChapter ? (
         <button
           type="button"
@@ -160,74 +195,5 @@ export function XorModule({ walkthrough }: { walkthrough?: ReactNode }) {
         </p>
       ) : null}
     </ModuleLayout>
-  );
-}
-
-function FreePlayInputs({
-  chapter,
-  input,
-  onChange,
-  onNewKey,
-  shareable,
-}: {
-  chapter: XorChapter;
-  input: typeof DEFAULTS;
-  onChange: (patch: Partial<typeof DEFAULTS>) => void;
-  onNewKey: () => void;
-  shareable: boolean;
-}) {
-  const id = useId();
-  const field =
-    'border-border bg-surface focus-visible:outline-focus w-full rounded-md border px-2 py-1.5 font-mono focus-visible:outline-2';
-  const fits = (text: string) => utf8Encode(text).length <= MAX_TEXT_BYTES;
-
-  return (
-    <div className="border-border bg-surface grid gap-3 rounded-lg border p-3 sm:grid-cols-2">
-      <label className="flex flex-col gap-1 text-sm" htmlFor={`${id}-a`}>
-        {chapter === 'ttp' ? 'Message 1' : 'Your text'} (up to {MAX_TEXT_BYTES} bytes)
-        <input
-          id={`${id}-a`}
-          className={field}
-          value={input.a}
-          onChange={(e) => fits(e.target.value) && onChange({ a: e.target.value })}
-        />
-      </label>
-      {chapter === 'ttp' ? (
-        <>
-          <label className="flex flex-col gap-1 text-sm" htmlFor={`${id}-b`}>
-            Message 2, encrypted with the same key
-            <input
-              id={`${id}-b`}
-              className={field}
-              value={input.b}
-              onChange={(e) => fits(e.target.value) && onChange({ b: e.target.value })}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm" htmlFor={`${id}-crib`}>
-            Crib: a word you guess is in one message
-            <input
-              id={`${id}-crib`}
-              className={field}
-              value={input.crib}
-              maxLength={16}
-              onChange={(e) => onChange({ crib: e.target.value })}
-            />
-          </label>
-        </>
-      ) : null}
-      {chapter === 'xor' || chapter === 'otp' || chapter === 'ttp' ? (
-        <div className="flex items-end">
-          <button type="button" className={BUTTON} onClick={onNewKey}>
-            <RefreshCw aria-hidden="true" className="size-4" />
-            New random key
-          </button>
-        </div>
-      ) : null}
-      {!shareable ? (
-        <p className="text-warn text-sm sm:col-span-2">
-          This state is too large to fit in a share link.
-        </p>
-      ) : null}
-    </div>
   );
 }

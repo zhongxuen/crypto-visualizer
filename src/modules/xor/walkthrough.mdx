@@ -1,21 +1,29 @@
-import { Chapter } from '@/components/lesson';
+import { Chapter, Term } from '@/components/lesson';
+
+import { Phase } from './components/Phase';
 
 <Chapter id="bytes">
 
 ## Everything is bytes
 
-Before anything can be encrypted or hashed, text has to become numbers. The standard way
-is **UTF-8**: each character gets a code point, and UTF-8 writes that code point as one to
-four bytes.
+Before anything can be encrypted or hashed, text has to become numbers.
 
-Plain English letters are below 128, so each is one byte, the same as ASCII. An accented
-letter like **é** needs two bytes, and an emoji like **🔐** needs four. Step through the
-text and watch each character split.
+<Phase id="encode">
 
-A byte is eight bits, a number from 0 to 255. **Hex** writes it as two digits from `0–9`
-and `a–f`, so `0x48` is 72, the letter H. **Binary** writes all eight bits. Switch between
-them with the toggle: every later module shows bytes in hex, so it is worth getting used
-to it here.
+The standard way is <Term id="utf-8" />: each character has a <Term id="code-point" />,
+and UTF-8 writes it as one to four <Term id="byte">bytes</Term>. English letters are below
+128, so each is one byte, the same as ASCII. **é** needs two and **🔐** needs four: step
+on and watch each character split onto the tape.
+
+</Phase>
+
+<Phase id="encode-done">
+
+A byte is eight bits, a number from 0 to 255. <Term id="hex" /> writes it as two digits
+from `0–9` and `a–f`, so `0x48` is 72, the letter H; binary writes all eight bits. Every
+later module shows bytes in hex, so try the toggle in "More options" here.
+
+</Phase>
 
 </Chapter>
 
@@ -23,16 +31,24 @@ to it here.
 
 ## XOR: a mask you can take off
 
-**XOR** (exclusive or, written ⊕) compares two bits: the result is 1 when they differ and
-0 when they match. Applied to whole bytes, it works on all eight bit columns at once.
+<Term id="xor" /> (exclusive or, written ⊕) compares two bits: 1 when they differ, 0 when
+they match. On whole bytes it works on all eight bit columns at once.
 
-Think of the key as a mask. Wherever a key bit is 1, the message bit flips; wherever it is
-0, the bit stays. Step through the message byte by byte and look at the bit columns.
+<Phase id="apply">
 
-Then comes the useful part: XOR the masked bytes with **the same key again** and the
-message comes back. Every bit that was flipped gets flipped back. In symbols,
-`x ⊕ k ⊕ k = x`. That one property is why XOR is inside almost every cipher, from the
-one-time pad to AES in counter mode.
+Think of the key as a mask. Under every 1 in the key, the message bit flips; under every
+0, it stays. Watch the bit columns: the filled cells are the bits that flipped, and the
+new byte drops onto the masked tape.
+
+</Phase>
+
+<Phase id="undo">
+
+Now XOR the masked bytes with **the same key again**. The same columns flip back, and the
+message returns: `x ⊕ k ⊕ k = x`. That one property is why XOR sits inside almost every
+cipher, from the one-time pad to AES in counter mode.
+
+</Phase>
 
 </Chapter>
 
@@ -41,17 +57,31 @@ one-time pad to AES in counter mode.
 ## The one-time pad
 
 Use a key that is **completely random**, **as long as the message**, and **used once**,
-and XOR is unbreakable. This is the one-time pad, patented by Gilbert Vernam in 1919.
+and XOR is unbreakable. This is the one-time pad (Vernam, 1919).
 
-In 1949 Claude Shannon proved why: for any message you guess, there is exactly one key
-that turns it into the ciphertext you see, and every key was equally likely. The
-ciphertext tells you nothing, not even a hint, about the message. That is called
-**perfect secrecy**.
+<Phase id="otp-setup">
 
-The catch is the key. It must be truly random, as long as everything you will ever send,
-delivered securely in advance, and destroyed after use. (The key here comes from a seeded
-generator so the run can be replayed. That makes it a picture of a one-time pad, not a
-real one.)
+First the message, then a key with one random byte for every message byte. (This key
+comes from a seeded generator so the run can be replayed: a picture of a one-time pad,
+not a real one.)
+
+</Phase>
+
+<Phase id="otp-encrypt">
+
+Each byte is masked with its own key byte. Claude Shannon proved in 1949 that the result
+tells you nothing: for any message you guess there is exactly one key that fits, and every
+key was equally likely. That is **perfect secrecy**.
+
+</Phase>
+
+<Phase id="otp-decrypt">
+
+The receiver XORs with the same key and reads the message. The catch is that key: truly
+random, as long as everything you will ever send, delivered in advance and destroyed
+after use.
+
+</Phase>
 
 </Chapter>
 
@@ -59,16 +89,28 @@ real one.)
 
 ## Use it twice and it breaks
 
-Now break the rule: encrypt **two** messages with the same key. Each ciphertext on its own
-still looks random. But an eavesdropper who has both can XOR them together, and the key
-cancels out: `c1 ⊕ c2 = p1 ⊕ p2`.
+Now break the rule and encrypt **two** messages with the same key.
 
-What is left is the two messages mixed with each other, and English is full of patterns.
-Guess a common word (a **crib**, like `" the "`) and slide it along. Where the guess is
-right in one message, XORing it out shows the other message's text at that spot, and it
-reads as words. Everywhere else you get gibberish.
+<Phase id="ttp-setup">
 
-This is not hypothetical. Soviet agencies reused one-time pad pages in the 1940s, and US
-codebreakers in the Venona project read thousands of messages this way.
+Each ciphertext on its own still looks random. Nothing seems wrong yet.
+
+</Phase>
+
+<Phase id="ttp-cancel">
+
+But an eavesdropper with both can XOR them together, and the key cancels:
+`c1 ⊕ c2 = p1 ⊕ p2`. What is left is the two messages mixed with each other.
+
+</Phase>
+
+<Phase id="ttp-crib">
+
+English is full of patterns. Guess a common word (a **crib**, like `" the "`) and drag it
+along. Where the guess is right in one message, the other message shows through and reads
+as words. Soviet agencies reused pad pages in the 1940s, and US codebreakers in the Venona
+project read thousands of messages this way.
+
+</Phase>
 
 </Chapter>
