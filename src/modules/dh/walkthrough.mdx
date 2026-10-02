@@ -1,4 +1,6 @@
-import { Chapter } from '@/components/lesson';
+import { Chapter, Term } from '@/components/lesson';
+
+import { Phase } from './components/Phase';
 
 <Chapter id="paint">
 
@@ -7,18 +9,41 @@ import { Chapter } from '@/components/lesson';
 Alice and Bob want a shared secret, but every message between them is read by **Eve**.
 Start with paint.
 
-1. They agree in public on a **common colour**, yellow.
-2. Each picks a **secret colour** and tells no one: red for Alice, blue for Bob.
-3. Each mixes the common colour with their secret one and sends the mixture across in
-   the open.
-4. Each adds their own secret colour to the mixture they received.
+<Phase id="pots">
 
-Both final pots hold one part yellow, one part red and one part blue, so they are the
-same colour. Eve saw yellow and both mixtures, but mixing those gives _two_ parts yellow.
-To match, she would have to pour a colour back out.
+They agree in public on a **common colour**, yellow. Each also picks a **secret
+colour** and tells no one: red for Alice, blue for Bob.
 
-The analogy has a limit, and the last step says where: paint mixing is an average, and an
-average can be undone. The real thing needs an operation that can't.
+</Phase>
+
+<Phase id="mix">
+
+Each mixes the common colour with their own secret, averaging in <Term id="oklab" />.
+That looks like real paint, and you can't see by eye which secret went in.
+
+</Phase>
+
+<Phase id="swap">
+
+They send the mixtures across in the open. Eve sees both pots go past.
+
+</Phase>
+
+<Phase id="mix-again">
+
+Each adds their own secret colour to the mixture they received. Both final pots hold
+one part yellow, one part red and one part blue, so they are the same colour.
+
+</Phase>
+
+<Phase id="eve">
+
+Eve saw yellow and both mixtures, but mixing those gives _two_ parts yellow. To match,
+she would have to pour a colour back out. That is also where the analogy stops: paint
+mixing is an average, and an average can be undone. The real thing needs an operation
+that can't.
+
+</Phase>
 
 </Chapter>
 
@@ -26,21 +51,58 @@ average can be undone. The real thing needs an operation that can't.
 
 ## The same thing with numbers
 
-Swap paint for arithmetic mod a prime. The public colour becomes two public numbers:
-the prime **p = 23** and the generator **g = 2**. Here p = 2 × 11 + 1 is a _safe prime_,
-and the powers of 2 mod 23 cycle through 11 values, listed under the first step.
+Swap paint for arithmetic <Term id="mod" /> a prime: numbers that wrap round like a
+clock.
 
-1. Alice picks a private **a = 6**, Bob a private **b = 8**. In this module they come
-   from a seeded, non-cryptographic generator, so they are for display only.
-2. Alice computes **A = 2⁶ mod 23 = 18** and Bob **B = 2⁸ mod 23 = 3**, by
-   square-and-multiply, one exponent bit at a time.
-3. They send A and B in the open. Each checks that what arrived is in the subgroup
-   (**y¹¹ mod 23 = 1**).
-4. Alice computes **Bᵃ = 3⁶ mod 23 = 16**; Bob computes **Aᵇ = 18⁸ mod 23 = 16**.
+<Phase id="params">
 
-Both get **16**, because (gᵇ)ᵃ = gᵃᵇ = (gᵃ)ᵇ. The number 16 never crossed the channel.
-Turn on **Eve’s view** to see what an eavesdropper has: p, g, A and B, and nothing
-else.
+The common colour becomes two public numbers: the prime **p = 23** and the generator
+**g = 2**. Here p = 2 × 11 + 1 is a _safe prime_, and the powers of 2 mod 23 cycle
+through 11 values.
+
+</Phase>
+
+<Phase id="private">
+
+Alice picks a private **a = 6**, Bob a private **b = 8**. In this module they come from
+a seeded, non-cryptographic generator, so they are for display only.
+
+</Phase>
+
+<Phase id="alice-public">
+
+Alice computes **A = 2⁶ mod 23 = 18** by square-and-multiply: one exponent bit at a
+time, square, and multiply by g when the bit is 1. The clock shows the running value.
+
+</Phase>
+
+<Phase id="bob-public">
+
+Bob does the same with his b: **B = 2⁸ mod 23 = 3**.
+
+</Phase>
+
+<Phase id="exchange">
+
+They send A and B in the open. Each checks that what arrived is in the subgroup
+(**y¹¹ mod 23 = 1**). Turn on **Eve’s view** to see what an eavesdropper has: p, g, A
+and B, and nothing else.
+
+</Phase>
+
+<Phase id="shared">
+
+Alice computes **Bᵃ = 3⁶ mod 23 = 16**; Bob computes **Aᵇ = 18⁸ mod 23 = 16**. Both get
+**16**, because (gᵇ)ᵃ = gᵃᵇ = (gᵃ)ᵇ. The number 16 never crossed the channel.
+
+</Phase>
+
+<Phase id="practice">
+
+Real groups use the same steps with a 617-digit p, and most TLS today uses X25519, the
+same idea on an elliptic curve.
+
+</Phase>
 
 </Chapter>
 
@@ -48,15 +110,35 @@ else.
 
 ## What Eve can do
 
-Eve has **p = 23, g = 2, A = 18 and B = 3**. To get the secret she needs a, and getting
-a from A = gᵃ mod p is the **discrete logarithm** problem. With p = 23 she just tries
-every exponent: 2¹, 2², 2³, … until one gives 18. After six guesses she has **a = 6**,
-and **B⁶ mod 23 = 16**, the secret. Her own lane fills in as she works it out.
+<Phase id="view">
 
-That only works because p is tiny. The table at the end shows how the number of guesses
-grows: roughly ten times per extra digit of p. Real groups (RFC 3526, RFC 7919) use a
-617-digit p, and the worst case becomes a 617-digit number of guesses. Better attacks
-than guessing exist, and 2048 bits is chosen so that they are out of reach too.
+Eve has **p = 23, g = 2, A = 18 and B = 3**. To get the secret she needs a, and getting
+a from A = gᵃ mod p is the **discrete logarithm** problem.
+
+</Phase>
+
+<Phase id="search">
+
+With p = 23 she just tries every exponent: 2¹, 2², 2³, … until one gives 18. Each guess
+is the last one times g, so the clock steps round.
+
+</Phase>
+
+<Phase id="found">
+
+After six guesses she has **a = 6**, and **B⁶ mod 23 = 16**, the secret. Her own lane
+fills in as she works it out.
+
+</Phase>
+
+<Phase id="growth">
+
+That only works because p is tiny. The number of guesses grows roughly ten times per
+extra digit of p. Real groups (RFC 3526, RFC 7919) use a 617-digit p, and the worst case
+becomes a 617-digit number of guesses. Better attacks than guessing exist, and 2048 bits
+is chosen so that they are out of reach too.
+
+</Phase>
 
 </Chapter>
 
@@ -64,19 +146,43 @@ than guessing exist, and 2048 bits is chosen so that they are out of reach too.
 
 ## Mallory in the middle
 
-Eve only listens. **Mallory** can also change what's sent. Plain Diffie-Hellman never
-says _who_ sent a share, so Mallory, with p = 467, catches Alice's A and Bob's B and
-forwards shares of her own.
+<Phase id="setup">
 
-Alice ends up with a secret she shares with Mallory, Bob with a different one, and
-Mallory holds both. When Alice sends a message (here 42, with a toy cipher), Mallory
-decrypts it, reads it, re-encrypts it for Bob, and Bob sees exactly what he expected.
-The four lanes show who holds what.
+Eve only listens. **Mallory** can also change what's sent. She sits on the channel with
+p = 467 and two private keys of her own.
+
+</Phase>
+
+<Phase id="swap">
+
+Plain Diffie-Hellman never says _who_ sent a share, so Mallory catches Alice's A and
+Bob's B and forwards shares of her own. The channel is now two channels, with her in
+the gap.
+
+</Phase>
+
+<Phase id="secrets">
+
+Alice ends up with a secret she shares with Mallory (●), Bob with a different one (■),
+and Mallory holds both.
+
+</Phase>
+
+<Phase id="relay">
+
+When Alice sends a message (here 42, with a toy cipher), Mallory decrypts it, reads it,
+re-encrypts it for Bob, and Bob sees exactly what he expected.
+
+</Phase>
+
+<Phase id="fix">
 
 The fix is to **prove who sent each share**. If Bob signs B with his private key, Alice
 can check it with his public key, and Mallory can't forge that signature. That is
 [RSA signing, from module 5](/rsa). And it is what [TLS 1.3](/#module-tls) does: the
 server signs the whole handshake, key shares included, with a key its certificate
 vouches for.
+
+</Phase>
 
 </Chapter>

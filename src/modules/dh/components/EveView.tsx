@@ -1,10 +1,12 @@
 import { ModClock, NumberTrace } from '@/components/blocks';
+import { useStepTransition } from '@/components/motion';
 import type {
   DhEvent,
   DhEveFoundEvent,
   DhEveGrowthEvent,
   EveGrowthRow,
 } from '@/core/dh/events';
+import { cn } from '@/lib/cn';
 
 import { hasClock } from './PowView';
 import { Value, Verdict } from './parts';
@@ -60,12 +62,17 @@ export function EveSearchView({
           maxHeight="20rem"
           className="min-w-0 flex-1"
         />
-        {last && p && hasClock(p) ? (
-          <ModClock
-            label={`Guess ${last.x}`}
-            modulus={BigInt(p)}
-            value={BigInt(last.value)}
-          />
+        {last ? (
+          <div className="flex flex-col items-center gap-2">
+            <Value label={`Guess x = ${last.x}: gˣ mod p`} value={last.value} changes />
+            {p && hasClock(p) ? (
+              <ModClock
+                label={`Guess ${last.x}`}
+                modulus={BigInt(p)}
+                value={BigInt(last.value)}
+              />
+            ) : null}
+          </div>
         ) : null}
       </div>
     </div>
@@ -77,8 +84,14 @@ export function EveFoundView({ event }: { event: DhEveFoundEvent }) {
     <div className="flex flex-col gap-3">
       <div className="grid gap-3 sm:grid-cols-3">
         <Value label="Guesses" value={event.tries} />
-        <Value label="a, found" value={event.x} testId="dh-eve-a" />
-        <Value label="Bᵃ mod p" value={event.shared} emphasis testId="dh-eve-secret" />
+        <Value label="a, found" value={event.x} changes testId="dh-eve-a" />
+        <Value
+          label="Bᵃ mod p"
+          value={event.shared}
+          emphasis
+          changes
+          testId="dh-eve-secret"
+        />
       </div>
       <Verdict ok={!event.ok}>
         {event.ok
@@ -111,6 +124,9 @@ export function EveGrowthView({
   event: DhEveGrowthEvent;
   groupName?: string;
 }) {
+  const { animate, direction } = useStepTransition();
+  const grow = animate && direction === 'forward';
+  const widest = Math.max(...event.rows.map((row) => row.worstCaseDigits), 1);
   return (
     <div className="border-border overflow-x-auto rounded-md border">
       <table className="w-full border-collapse text-sm" data-testid="dh-growth">
@@ -134,10 +150,13 @@ export function EveGrowthView({
             <th scope="col" className="px-2 py-1 text-right font-medium">
               Time
             </th>
+            <th scope="col" className="w-1/4 min-w-24 px-2 py-1 text-left font-medium">
+              Digits of the guess count
+            </th>
           </tr>
         </thead>
         <tbody>
-          {event.rows.map((row) => {
+          {event.rows.map((row, i) => {
             const current = row.group === groupName;
             return (
               <tr
@@ -163,6 +182,27 @@ export function EveGrowthView({
                   {worstCase(row)}
                 </td>
                 <td className="px-2 py-1 text-right">{timeTaken(row)}</td>
+                <td className="px-2 py-1">
+                  <span className="flex items-center gap-1">
+                    <span
+                      key={grow ? `${event.id}.${row.group}` : row.group}
+                      aria-hidden="true"
+                      className={cn(
+                        'bg-diff-on h-2.5 origin-left rounded-full',
+                        grow &&
+                          'transition-transform duration-(--dur-step) ease-(--ease-out) starting:scale-x-0',
+                      )}
+                      style={{
+                        width: `${(row.worstCaseDigits / widest) * 100}%`,
+                        minWidth: '2px',
+                        transitionDelay: grow ? `calc(${i} * var(--stagger))` : undefined,
+                      }}
+                    />
+                    <span className="font-mono text-xs tabular-nums">
+                      {row.worstCaseDigits}
+                    </span>
+                  </span>
+                </td>
               </tr>
             );
           })}

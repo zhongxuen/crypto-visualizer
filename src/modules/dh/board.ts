@@ -19,6 +19,15 @@ export type ItemTone = 'private' | 'share' | 'secret' | 'fake' | 'check' | 'publ
 
 export interface BoardItem {
   key: string;
+  /** The item's element id in the lanes, for `<Travel from>`. */
+  id: string;
+  /** The element id of the item this one came from, when it crossed lanes. */
+  source?: string;
+  /**
+   * Which of the two MITM secrets this is: `alice` for the Alice–Mallory pair, `bob` for
+   * Mallory–Bob. Each pair gets its own colour and glyph.
+   */
+  pair?: DhParty;
   name: string;
   /** A decimal integer or short text. Absent: unknown to this lane (shown as "?"). */
   value?: string;
@@ -42,10 +51,21 @@ function emptyBoard(): Board {
 export function buildBoard(events: readonly DhEvent[], index: number): Board {
   const board = emptyBoard();
   const last = Math.min(index, events.length - 1);
+  // The MITM message hops lane to lane: each hop starts where the last one landed.
+  let lastMessage: BoardItem | undefined;
   for (let step = 0; step <= last; step += 1) {
     const e = events[step];
-    const put = (lane: LaneId, item: Omit<BoardItem, 'key' | 'step'>) =>
-      board[lane].push({ ...item, key: `${step}.${board[lane].length}`, step });
+    const put = (lane: LaneId, item: Omit<BoardItem, 'key' | 'id' | 'step'>) => {
+      const n = board[lane].length;
+      const placed = {
+        ...item,
+        key: `${step}.${n}`,
+        id: `dh-${lane}-${step}-${n}`,
+        step,
+      };
+      board[lane].push(placed);
+      return placed;
+    };
     switch (e.kind) {
       case 'dh.paintPot':
         put(e.actor === 'public' ? 'public' : e.actor === 'bob' ? 'bob' : 'alice', {
@@ -66,6 +86,7 @@ export function buildBoard(events: readonly DhEvent[], index: number): Board {
         break;
       case 'dh.paintSend':
         put('public', {
+          source: latest(board[e.from], (i) => i.colour === e.colour)?.id,
           name: `${WHO[e.from]}'s mixture`,
           value: e.colour,
           colour: e.colour,
@@ -101,6 +122,7 @@ export function buildBoard(events: readonly DhEvent[], index: number): Board {
         break;
       case 'dh.send':
         put('public', {
+          source: latest(board[e.from], (i) => i.name === e.name)?.id,
           name: e.name,
           value: e.value,
           note: `${WHO[e.from]} → ${WHO[e.to]}`,
@@ -121,6 +143,7 @@ export function buildBoard(events: readonly DhEvent[], index: number): Board {
             name: 'Secret',
             value: e.value,
             note: e.with === 'mallory' ? 'shared with Mallory' : undefined,
+            pair: e.with === 'mallory' ? e.actor : undefined,
             tone: 'secret',
           });
         }
@@ -147,13 +170,15 @@ export function buildBoard(events: readonly DhEvent[], index: number): Board {
         break;
       case 'dh.mitmIntercept': {
         const catcher: LaneId = e.from === 'alice' ? 'malloryA' : 'malloryB';
-        put(catcher, {
+        const caught = put(catcher, {
+          source: latest(board[e.from], (i) => i.name === e.name)?.id,
           name: `Caught ${e.name}`,
           value: e.original,
           note: `from ${WHO[e.from]}`,
           tone: 'share',
         });
         put(e.to, {
+          source: caught.id,
           name: `“${e.name}”`,
           value: e.replacement,
           note: `really Mallory's ${e.replacementName}`,
@@ -165,11 +190,13 @@ export function buildBoard(events: readonly DhEvent[], index: number): Board {
         put('malloryA', {
           name: 'Secret with Alice',
           value: e.malloryWithAlice,
+          pair: 'alice',
           tone: 'secret',
         });
         put('malloryB', {
           name: 'Secret with Bob',
           value: e.malloryWithBob,
+          pair: 'bob',
           tone: 'secret',
         });
         break;
@@ -180,7 +207,8 @@ export function buildBoard(events: readonly DhEvent[], index: number): Board {
               ? 'malloryA'
               : 'malloryB'
             : e.actor;
-        put(lane, {
+        lastMessage = put(lane, {
+          source: lastMessage?.id,
           name: e.action === 'encrypt' ? 'Sends c' : 'Reads m',
           value: e.output,
           note: e.action === 'encrypt' ? `m = ${e.input}` : `c = ${e.input}`,
@@ -193,6 +221,32 @@ export function buildBoard(events: readonly DhEvent[], index: number): Board {
     }
   }
   return board;
+}
+
+/** The most recent item in `items` that matches. */
+function latest(
+  items: readonly BoardItem[],
+  match: (item: BoardItem) => boolean,
+): BoardItem | undefined {
+  for (let i = items.length - 1; i >= 0; i -= 1) if (match(items[i])) return items[i];
+  return undefined;
+}
+
+/**
+ * Where each paint poured into a mix came from: for every input colour, the pot holding
+ * it that the mixer can reach (the public channel first, then their own lane). A lookup
+ * by colour, nothing computed.
+ */
+export function pourSources(
+  board: Board,
+  actor: LaneId,
+  inputs: readonly string[],
+  before: number,
+): (string | undefined)[] {
+  return inputs.map((colour) => {
+    const match = (i: BoardItem) => i.step < before && i.colour === colour;
+    return (latest(board.public, match) ?? latest(board[actor], match))?.id;
+  });
 }
 
 /** A long decimal as its first and last digits, for a lane. */

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { Morph, Pulse } from '@/components/motion';
 import { cn } from '@/lib/cn';
 
 /** Not uppercased: in Diffie-Hellman a (private) and A (public) are different numbers. */
@@ -12,41 +13,38 @@ export function Value({
   label,
   value,
   emphasis = false,
+  changes = false,
   testId,
 }: {
   label: string;
   value: string;
   emphasis?: boolean;
+  /** The value replaces last step's: its changed digits flip, and the card pulses. */
+  changes?: boolean;
   testId?: string;
 }) {
+  const card = (
+    <p
+      data-testid={testId}
+      className={cn(
+        'bg-surface rounded-md px-3 py-2 font-mono text-sm break-all',
+        emphasis ? 'border-accent border-2' : 'border-border border',
+      )}
+    >
+      {changes ? (
+        <Pulse trigger={value}>
+          <Morph value={value} />
+        </Pulse>
+      ) : (
+        value
+      )}
+    </p>
+  );
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <Label>{label}</Label>
-      <p
-        data-testid={testId}
-        className={cn(
-          'bg-surface rounded-md px-3 py-2 font-mono text-sm break-all',
-          emphasis ? 'border-accent border-2' : 'border-border border',
-        )}
-      >
-        {value}
-      </p>
+      {card}
     </div>
-  );
-}
-
-/** A pot of paint. The colour is decoration: its hex code is always printed beside it. */
-export function Swatch({ colour, className }: { colour: string; className?: string }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        'border-border-strong inline-block shrink-0 rounded-t-sm rounded-b-xl border-2',
-        // The size, unless the caller gives its own.
-        className ?? 'size-8',
-      )}
-      style={{ backgroundColor: colour }}
-    />
   );
 }
 

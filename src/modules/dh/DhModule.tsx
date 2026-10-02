@@ -19,9 +19,10 @@ import { DH_SHARE, type DhScene } from '@/core/dh/share';
 import { createRun } from '@/core/events/builder';
 import { cn } from '@/lib/cn';
 
-import { buildBoard, shortNumber, type LaneId } from './board';
+import { buildBoard, shortNumber, type Board, type BoardItem } from './board';
 import { Lanes } from './components/Lanes';
-import { PaintEveView, PaintLimitView, PaintSharedView } from './components/PaintViews';
+import { PaintPotView } from './components/PaintViews';
+import { PhaseContext } from './components/Phase';
 import { DH_PAGE_CITATIONS } from './citations';
 import { DH_CHAPTER_LIST, DH_META } from './meta';
 import { paintRun } from './paintRun';
@@ -40,9 +41,19 @@ const EMPTY_RUN = createRun<DhEvent>().finish();
 const loadRuns = () => import('./runs');
 type Runs = Awaited<ReturnType<typeof loadRuns>>;
 
-const THREE_LANES: readonly LaneId[] = ['alice', 'public', 'bob'];
-const WITH_EVE: readonly LaneId[] = ['alice', 'public', 'bob', 'eve'];
-const FOUR_LANES: readonly LaneId[] = ['alice', 'malloryA', 'malloryB', 'bob'];
+/**
+ * Steps that are about values already in the lanes: both secrets agreeing, both final
+ * pots matching. Those values glow together, at the same moment.
+ */
+function glowFor(event: DhEvent | undefined): ((item: BoardItem) => boolean) | undefined {
+  if (event?.kind === 'dh.agree' || event?.kind === 'dh.mitmKeys') {
+    return (item) => item.tone === 'secret';
+  }
+  if (event?.kind === 'dh.paintShared') {
+    return (item) => item.tone === 'secret' && item.colour !== undefined;
+  }
+  return undefined;
+}
 
 function isDefaultInput(state: DhState): boolean {
   const d = DEFAULTS.input;
@@ -56,34 +67,35 @@ function isDefaultInput(state: DhState): boolean {
   );
 }
 
-/** The picture for one step, below the lanes. */
-/** The picture for one step: paint's views are static, the other scenes' come with `runs`. */
+/**
+ * The picture for one step. The first paint step's view is static; every later one
+ * (paint's too) comes with `runs`, which loads right after hydration.
+ */
 function StepPicture({
   event,
   events,
   index,
+  board,
   groupName,
   runs,
 }: {
   event: DhEvent;
   events: readonly DhEvent[];
   index: number;
+  board: Board;
   groupName?: string;
   runs: Runs | null;
 }) {
   switch (event.kind) {
-    case 'dh.paintShared':
-      return <PaintSharedView event={event} />;
-    case 'dh.paintEve':
-      return <PaintEveView event={event} />;
-    case 'dh.paintLimit':
-      return <PaintLimitView />;
+    case 'dh.paintPot':
+      return <PaintPotView event={event} />;
     default:
       return runs ? (
         <runs.ScenePicture
           event={event}
           events={events}
           index={index}
+          board={board}
           groupName={groupName}
         />
       ) : null;
@@ -177,6 +189,9 @@ export function DhModule({ walkthrough }: { walkthrough?: ReactNode }) {
       ? runs.getGroup(params.groupId).name
       : undefined;
   const eve = scene === 'eve' || (scene === 'exchange' && eveOverlay);
+  const phaseId =
+    mode === 'walkthrough' ? (result.phases[view.phaseIndex]?.id ?? null) : null;
+  const glow = glowFor(event);
   // Eve's own lane: always in her chapter, and in the paint chapter once she mixes.
   const showEveLane = scene === 'eve' || (scene === 'paint' && board.eve.length > 0);
 
@@ -203,7 +218,9 @@ export function DhModule({ walkthrough }: { walkthrough?: ReactNode }) {
         />
       }
       lesson={
-        <ChapterContext.Provider value={scene}>{walkthrough}</ChapterContext.Provider>
+        <ChapterContext.Provider value={scene}>
+          <PhaseContext.Provider value={phaseId}>{walkthrough}</PhaseContext.Provider>
+        </ChapterContext.Provider>
       }
       controls={
         mode === 'free' && runs ? (
@@ -262,12 +279,14 @@ export function DhModule({ walkthrough }: { walkthrough?: ReactNode }) {
                   .join(', ') || 'nothing yet'}
                 .
               </p>
-              <Lanes
-                board={board}
-                lanes={FOUR_LANES}
-                index={view.index}
-                label="Alice, Mallory in the middle, and Bob"
-              />
+              {runs ? (
+                <runs.SplitLanes
+                  board={board}
+                  index={view.index}
+                  glow={glow}
+                  label="Alice, Mallory in the middle, and Bob"
+                />
+              ) : null}
             </>
           ) : (
             <div
@@ -284,9 +303,10 @@ export function DhModule({ walkthrough }: { walkthrough?: ReactNode }) {
               ) : null}
               <Lanes
                 board={board}
-                lanes={showEveLane ? WITH_EVE : THREE_LANES}
                 index={view.index}
                 eve={eve}
+                withEve={showEveLane}
+                glow={glow}
                 label={
                   showEveLane
                     ? 'Alice, the public channel, Bob and Eve'
@@ -299,6 +319,7 @@ export function DhModule({ walkthrough }: { walkthrough?: ReactNode }) {
             event={event}
             events={events}
             index={view.index}
+            board={board}
             groupName={groupName}
             runs={runs}
           />
