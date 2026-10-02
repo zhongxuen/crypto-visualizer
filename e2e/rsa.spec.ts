@@ -20,6 +20,16 @@ async function linkHasStep(page: Page, step: number) {
 }
 
 async function axeClean(page: Page, what: string) {
+  // Check the frame the reader is left with, not one mid-fade: a label at half opacity
+  // can read below 4.5:1 for the 200 ms it takes to arrive. Infinite loops never finish.
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.effect?.getComputedTiming().endTime !== Infinity)
+        .map((a) => a.finished.catch(() => undefined)),
+    ),
+  );
   expect((await new AxeBuilder({ page }).analyze()).violations, what).toEqual([]);
 }
 
