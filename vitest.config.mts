@@ -29,6 +29,10 @@ export default defineConfig({
         test: {
           name: 'ui',
           environment: 'jsdom',
+          // An axe pass over a whole page takes 5-15 s in jsdom when the full suite shares
+          // the CPU, past vitest's 5 s default. A timeout only bounds a hang and checks
+          // nothing, so the longer one weakens no assertion.
+          testTimeout: 30_000,
           setupFiles: ['./tests/setup.ts'],
           include: ['src/{components,modules,lib}/**/*.test.{ts,tsx}'],
         },
