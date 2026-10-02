@@ -11,6 +11,7 @@ import {
   useByteFormat,
 } from '@/components/blocks';
 import { StepInspector } from '@/components/inspector';
+import { StepTransitionProvider } from '@/components/motion';
 import { ModuleLayout, type ModuleMode } from '@/components/shell';
 import { CITATIONS } from '@/core/citations';
 import {
@@ -24,6 +25,7 @@ import {
 } from '@/components/timeline';
 
 import { buildDemoRun } from './demoRun';
+import { MotionDemo } from './MotionDemo';
 
 export function DemoView() {
   const result = useMemo(() => buildDemoRun(), []);
@@ -97,6 +99,9 @@ export function DemoView() {
         rows={result.events.map((e) => e.row)}
         currentRow={index}
       />
+      <StepTransitionProvider step={Math.max(0, index)}>
+        <MotionDemo event={event} index={Math.max(0, index)} />
+      </StepTransitionProvider>
     </ModuleLayout>
   );
 }

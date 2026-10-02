@@ -45,6 +45,48 @@ test.describe('/demo building blocks', () => {
   });
 });
 
+test.describe('/demo motion primitives', () => {
+  const PRIMITIVES = ['reveal', 'pulse', 'wave', 'flip', 'travel'];
+  const animating = (page: import('@playwright/test').Page) =>
+    page.evaluate(() =>
+      [...document.querySelectorAll('[data-testid="motion-demo"] [class*="motion-"]')]
+        .map((node) => node.closest('[data-primitive]')?.getAttribute('data-primitive'))
+        .filter((name, i, all) => name && all.indexOf(name) === i),
+    );
+
+  test('one step plays each primitive', async ({ page }) => {
+    await page.goto('/demo');
+    await expect(page.getByRole('status')).toContainText('Step 1 of 9');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('status')).toContainText('Step 3 of 9');
+    const names = await animating(page);
+    for (const name of PRIMITIVES.filter((n) => n !== 'pulse')) {
+      expect(names).toContain(name);
+    }
+  });
+
+  test('a seek only crossfades, and lands on the end frame', async ({ page }) => {
+    await page.goto('/demo');
+    await expect(page.getByRole('status')).toContainText('Step 1 of 9');
+    await page.keyboard.press('End');
+    await expect(page.getByRole('status')).toContainText('Step 9 of 9');
+    expect(await animating(page)).toEqual(['reveal']);
+    await expect(
+      page.locator('[data-primitive="reveal"] .motion-fade'),
+    ).toHaveText('Done.');
+  });
+
+  test('reduced motion shows every end frame at once', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/demo');
+    await expect(page.getByRole('status')).toContainText('Step 1 of 9');
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('status')).toContainText('Step 2 of 9');
+    expect(await animating(page)).toEqual([]);
+  });
+});
+
 test('/about has no axe violations', async ({ page }) => {
   await page.goto('/about');
   const results = await new AxeBuilder({ page }).analyze();

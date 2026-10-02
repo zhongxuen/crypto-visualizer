@@ -32,17 +32,91 @@
   --color-diff-on: var(--diff-on);
   --color-diff-on-fg: var(--diff-on-fg);
   --color-diff-off: var(--diff-off);
+  --color-grid: var(--grid);
+  --color-secret: var(--secret);
+  --color-public: var(--public);
+  --color-tint-xor: var(--tint-xor);
+  --color-tint-hashing: var(--tint-hashing);
+  --color-tint-passwords: var(--tint-passwords);
+  --color-tint-aes: var(--tint-aes);
+  --color-tint-rsa: var(--tint-rsa);
+  --color-tint-dh: var(--tint-dh);
+  --color-tint-tls: var(--tint-tls);
   --radius-token: var(--radius);
+  --radius-cell: var(--radius-cell);
   --spacing-target: var(--target);
   --spacing-target-floor: var(--target-floor);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces);
+  --font-mono: var(--font-jetbrains-mono);
+  --ease-out: var(--ease-out);
+  --ease-in-out: var(--ease-in-out);
+}
+
+/* The type scale (UIUX §5.2): 12 / 14 / 16 / 18 / 22 / 28 / 36 / 48. */
+@theme {
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.35;
+  --text-2xl: 1.75rem;
+  --text-2xl--line-height: 1.25;
+  --text-3xl: 2.25rem;
+  --text-3xl--line-height: 1.15;
+  --text-4xl: 3rem;
+  --text-4xl--line-height: 1.05;
+}
+
+/* Display type: Fraunces at a soft weight, for h1, h2 and module numbers. */
+@utility font-display {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-variation-settings: 'SOFT' 50;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* Squared paper (UIUX §5.3): 24 px cells, a gradient, no image. The stage sits on it. */
+@utility bg-paper {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: -1px -1px;
+}
+
+/* The highlighter: a slightly rotated marker swipe behind what is current, so "current"
+   reads as a hand mark rather than another border. */
+@utility highlighter {
+  position: relative;
+  isolation: isolate;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 8% -4%;
+    z-index: -1;
+    border-radius: 0.2em 0.5em 0.3em 0.6em;
+    background: var(--highlight);
+    transform: rotate(-1deg);
+  }
 }
 
 body {
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Geist has no Greek or maths symbols, so Σ, σ, φ, ⊕ and ≡ in running text used to fall
+   back to Arial at another size and baseline (UIUX B5). JetBrains Mono has them, so it
+   goes between Geist and Geist's metric fallback: only those glyphs come from it. The
+   family names are the ones next/font gives the faces. */
+body,
+.font-sans {
+  font-family: 'Geist', 'JetBrains Mono', 'Geist Fallback', system-ui, sans-serif;
+}
+
+/* Numbers line up wherever the mono face is used. */
+.font-mono {
+  font-variant-numeric: tabular-nums slashed-zero;
 }
 
 :focus-visible {
@@ -58,12 +132,76 @@ body {
   );
 }
 
+/* Motion primitives (src/components/motion, UIUX §6). Each one only names a keyframe and
+   a duration from the tokens; reduced motion below collapses all of them to the end
+   frame. `--from-x` / `--from-y` are set inline by <Flip> and <Travel>. */
+@keyframes cv-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--reveal-dir, 1) * 4px));
+  }
+}
+@keyframes cv-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes cv-pulse {
+  from {
+    background-color: var(--highlight);
+    box-shadow: 0 0 0 3px var(--highlight);
+  }
+}
+@keyframes cv-flip-card {
+  0% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+@keyframes cv-move {
+  from {
+    transform: translate(var(--from-x, 0), var(--from-y, 0));
+  }
+}
+@keyframes cv-wave {
+  from {
+    opacity: 0.15;
+    transform: scale(0.6);
+  }
+}
+.motion-reveal {
+  animation: cv-reveal var(--dur-quick) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * var(--stagger));
+}
+.motion-fade {
+  animation: cv-fade 120ms var(--ease-out) both;
+}
+.motion-pulse {
+  animation: cv-pulse var(--dur-step) var(--ease-out);
+}
+.motion-flip-card {
+  animation: cv-flip-card 180ms var(--ease-in-out);
+}
+.motion-move {
+  animation: cv-move var(--dur-step) var(--ease-out) both;
+}
+.motion-wave > * {
+  animation: cv-wave var(--dur-quick) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * var(--wave-stagger, 8ms));
+}
+
 /* Reduced motion: no tweening anywhere. Step changes are instant. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
@@ -78,8 +216,9 @@ body {
   margin-block: 0.75rem;
 }
 .prose-cv h2 {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 1.375rem;
+  font-weight: 500;
   margin-block: 1rem 0.5rem;
 }
 .prose-cv h3 {

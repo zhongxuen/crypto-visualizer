@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Fraunces, Geist, JetBrains_Mono } from 'next/font/google';
 
 import { SiteAnalytics, SiteFooter, SiteHeader, THEME_SCRIPT } from '@/components/shell';
 import { SITE, siteUrl } from '@/lib/site';
@@ -11,9 +11,20 @@ const geistSans = Geist({
   subsets: ['latin'],
 });
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+/** Headings and module numbers: a notebook heading, not a tech brand (UIUX §5.2). */
+const fraunces = Fraunces({
+  variable: '--font-fraunces',
   subsets: ['latin'],
+  axes: ['opsz', 'SOFT'],
+});
+
+/**
+ * Numbers, bytes and code. It has Σ, σ, φ, ⊕ and ≡ (so the hashing round view no longer
+ * falls back to another font, UIUX B5), and a slashed zero, so 0 and O never mix in hex.
+ */
+const jetbrainsMono = JetBrains_Mono({
+  variable: '--font-jetbrains-mono',
+  subsets: ['latin', 'greek'],
 });
 
 export const metadata: Metadata = {
@@ -41,7 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="en"
       // The theme script sets `data-theme` before hydration.
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${fraunces.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
