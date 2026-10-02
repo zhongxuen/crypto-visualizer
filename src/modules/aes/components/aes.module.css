@@ -1,0 +1,122 @@
+/*
+ * The AES views' step animations (docs/UIUX.md §7.2, module 4). Each shows the operation
+ * the step performs, and each is only switched on for a single forward step
+ * (`useStepPlay`); the DOM already holds the end frame, so a seek, a step back or reduced
+ * motion (globals.css collapses every animation) shows it at once. Durations scale with
+ * the playback speed and stay under 70% of a step (STEP_MS = 600 ms at 1x).
+ */
+
+.cells,
+.drop,
+.flipOne,
+.glowOne,
+.wrapIn,
+.lookup,
+.sweep {
+  --unit: calc(1ms / var(--speed, 1));
+}
+
+/* Where a ByteGrid cell sits: --r from its row, --c from its column (cells are the
+   only <div>s in a row; the row label is a <span>). */
+.cells [role='row']:nth-child(2) {
+  --r: 1;
+}
+.cells [role='row']:nth-child(3) {
+  --r: 2;
+}
+.cells [role='row']:nth-child(4) {
+  --r: 3;
+}
+.cells [role='gridcell']:nth-of-type(2) {
+  --c: 1;
+}
+.cells [role='gridcell']:nth-of-type(3) {
+  --c: 2;
+}
+.cells [role='gridcell']:nth-of-type(4) {
+  --c: 3;
+}
+
+/* SubBytes: each new byte flips into its cell, in state order (column by column). */
+.flipIn [role='gridcell'] {
+  animation: flip calc(180 * var(--unit)) var(--ease-in-out) both;
+  animation-delay: calc((var(--c, 0) * 4 + var(--r, 0)) * 13 * var(--unit));
+}
+
+/* MixColumns: one column at a time glows, and its new values flip in. */
+.byColumn [role='gridcell'] {
+  animation:
+    glow calc(200 * var(--unit)) var(--ease-out) both,
+    flip calc(160 * var(--unit)) var(--ease-in-out) both;
+  animation-delay: calc(var(--c, 0) * 60 * var(--unit));
+}
+
+/* AddRoundKey: the round key drops onto the state; the changed cells then pulse. */
+.drop {
+  animation: drop calc(200 * var(--unit)) var(--ease-out) both;
+}
+.pulseChanged [data-changed] {
+  animation: glow calc(220 * var(--unit)) var(--ease-out) both;
+  animation-delay: calc(170 * var(--unit));
+}
+
+/* A value that just appeared (SubWord's bytes, a ciphertext block). */
+.flipOne {
+  animation: flip calc(180 * var(--unit)) var(--ease-in-out) both;
+  animation-delay: calc(var(--i, 0) * 30 * var(--unit) + var(--after, 0ms));
+}
+.glowOne {
+  animation: glow calc(220 * var(--unit)) var(--ease-out) both;
+  animation-delay: var(--after, 0ms);
+}
+
+/* ShiftRows / RotWord: a byte that falls off the left end comes back on the right. It
+   slides in from beyond the right edge with a short fade instead of crossing the row. */
+.wrapIn {
+  animation: wrapIn calc(300 * var(--unit)) var(--ease-out) both;
+}
+
+/* S-box: each byte of the state is looked up in turn; its entry glows. */
+.lookup {
+  animation: glow calc(160 * var(--unit)) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 13 * var(--unit));
+}
+
+/* The penguin: the ciphertext covers the picture block row by block row. */
+.sweep {
+  animation: sweep calc(400 * var(--unit)) steps(16, end) both;
+}
+
+@keyframes flip {
+  0% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+@keyframes glow {
+  from {
+    background-color: var(--highlight);
+    box-shadow: 0 0 0 3px var(--highlight);
+  }
+}
+@keyframes drop {
+  from {
+    transform: translateY(-14px);
+  }
+}
+@keyframes wrapIn {
+  from {
+    transform: translateX(1.5rem);
+    opacity: 0.4;
+  }
+}
+@keyframes sweep {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+}

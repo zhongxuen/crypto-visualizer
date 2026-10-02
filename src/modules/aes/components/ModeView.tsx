@@ -4,6 +4,7 @@ import { ArrowDown, ArrowLeft } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 
 import { ByteGrid, type ByteFormat } from '@/components/blocks';
+import { Morph, Pulse, Travel } from '@/components/motion';
 import type {
   AesEvent,
   AesModeBlockEvent,
@@ -13,11 +14,14 @@ import type {
 import { cn } from '@/lib/cn';
 
 import { MODE_NAMES } from './modeNames';
+import { useStepPlay } from './motion';
 import { hex, Label } from './parts';
 
 export { MODE_NAMES } from './modeNames';
 
 const spaced = (bytes: ArrayLike<number>) => hex(bytes).replace(/(.{8})(?!$)/g, '$1 ');
+/** The id of a block's entry in the chain, where CBC's chaining value travels from. */
+const chainId = (block: number) => `aes-chain-${block}`;
 const printable = (bytes: readonly number[]) =>
   bytes.map((b) => (b >= 0x20 && b < 0x7f ? String.fromCharCode(b) : '·')).join('');
 
@@ -26,10 +30,13 @@ function Box({
   name,
   value,
   tone = 'plain',
+  children,
 }: {
   name: string;
   value?: string;
   tone?: 'plain' | 'cipher' | 'result';
+  /** The value, drawn by the caller (a counter that ticks). */
+  children?: ReactNode;
 }) {
   return (
     <div
@@ -41,9 +48,10 @@ function Box({
       )}
     >
       <span className="text-fg-muted text-xs">{name}</span>
-      {value !== undefined ? (
-        <span className="font-mono text-xs break-all">{value}</span>
-      ) : null}
+      {children ??
+        (value !== undefined ? (
+          <span className="font-mono text-xs break-all">{value}</span>
+        ) : null)}
     </div>
   );
 }
@@ -89,7 +97,10 @@ function BlockDiagram({ event }: { event: AesModeBlockEvent }) {
       <Xor
         key="x"
         side={
-          <Box name={n === 1 ? 'IV' : `C${n - 1}`} value={spaced(event.chain ?? [])} />
+          // The previous ciphertext block travels from the chain into this XOR.
+          <Travel from={chainId(event.block - 1)} trigger={event.id}>
+            <Box name={n === 1 ? 'IV' : `C${n - 1}`} value={spaced(event.chain ?? [])} />
+          </Travel>
         }
       />,
       <Box key="in" name="into AES" value={spaced(event.cipherInput)} />,
@@ -98,7 +109,13 @@ function BlockDiagram({ event }: { event: AesModeBlockEvent }) {
     ];
   } else {
     steps = [
-      <Box key="t" name={`T${n} (counter block)`} value={spaced(event.counter ?? [])} />,
+      // The counter ticks: the digits that changed since the last block flip.
+      <Box key="t" name={`T${n} (counter block)`}>
+        <Morph
+          value={spaced(event.counter ?? [])}
+          className="font-mono text-xs break-all"
+        />
+      </Box>,
       cipher,
       <Box key="ks" name="keystream" value={spaced(event.cipherOutput)} />,
       <Xor
@@ -140,6 +157,7 @@ function Chain({ blocks, upTo }: { blocks: readonly AesModeBlockEvent[]; upTo: n
           return (
             <li
               key={b.id}
+              id={chainId(b.block)}
               aria-current={b.block === upTo ? 'step' : undefined}
               className={cn(
                 'flex w-36 flex-col gap-0.5 rounded-md px-2 py-1 font-mono text-xs',
@@ -154,10 +172,10 @@ function Chain({ blocks, upTo }: { blocks: readonly AesModeBlockEvent[]; upTo: n
                 <span className="sr-only">plaintext </span>
                 {printable(b.plaintext)}
               </span>
-              <span className="break-all">
+              <Pulse trigger={upTo} active={b.block === upTo} className="break-all">
                 <span className="sr-only">ciphertext </span>
                 {done ? hex(b.ciphertext).slice(0, 16) + '…' : 'not yet'}
-              </span>
+              </Pulse>
               {repeat ? (
                 <span className="font-sans font-semibold">
                   same as block {b.repeatOf! + 1}
@@ -240,6 +258,7 @@ export const ModeView = memo(function ModeView({
   blocks: readonly AesModeBlockEvent[];
   format: ByteFormat;
 }) {
+  const { fade } = useStepPlay();
   switch (event.kind) {
     case 'aes.pad':
       return <PadView event={event} format={format} />;
@@ -262,7 +281,7 @@ export const ModeView = memo(function ModeView({
       );
     case 'aes.modeBlock':
       return (
-        <div className="flex flex-col gap-4">
+        <div className={cn('flex flex-col gap-4', fade && 'motion-fade')}>
           <BlockDiagram event={event} />
           <Chain blocks={blocks} upTo={event.block} />
         </div>

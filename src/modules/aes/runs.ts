@@ -9,9 +9,11 @@ import { penguinRun } from '@/core/aes/penguin';
 import type { AesShareState } from '@/core/aes/state';
 import type { SimResult } from '@/core/sim/result';
 
-import { aesInputs, blockRunFor, inputProblem } from './blockRun';
+import { aesInputs, blockRunFor } from './blockRun';
+import { inputProblem } from './inputProblem';
 
-export { AES_WALKTHROUGH, aesInputs, inputProblem, type AesInputs } from './blockRun';
+export { AES_WALKTHROUGH, aesInputs, type AesInputs } from './blockRun';
+export { inputProblem } from './inputProblem';
 // For the page, which loads this file after hydration (`useDeferredImport`): the penguin's
 // pixels and the views of every chapter but the block. They render from the loaded module
 // rather than through `next/dynamic`, so nothing suspends while a learner steps.
@@ -21,6 +23,7 @@ export { AvalancheView } from './components/AvalancheView';
 export { GcmView } from './components/GcmView';
 export { KeyScheduleView } from './components/KeyScheduleView';
 export { ModeView } from './components/ModeView';
+export { ModePicker } from './components/ModePicker';
 export { PenguinView } from './components/PenguinView';
 export { FreePlayInputs } from './components/Inputs';
 

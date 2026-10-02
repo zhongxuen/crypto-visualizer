@@ -70,6 +70,8 @@ describe('AesModule', { timeout: 20_000 }, () => {
     expect(screen.getByRole('status')).toHaveTextContent('Step 1 of 42');
   });
 
+  // Six full axe passes, one over the 256-cell S-box: under a loaded parallel run this
+  // can take well over 30 s. The penguin has its own test below.
   it('is axe clean in every chapter', async () => {
     const { container } = await renderLoaded();
     for (const name of ['One block', 'Key schedule', 'Avalanche', 'Modes', 'GCM']) {
@@ -78,5 +80,14 @@ describe('AesModule', { timeout: 20_000 }, () => {
     }
     fireEvent.click(screen.getByRole('button', { name: 'Free play' }));
     await expectNoAxeViolations(container);
-  }, 30_000);
+  }, 60_000);
+
+  it('is axe clean in the penguin chapter, locked and enlarged', async () => {
+    const { container } = await renderLoaded();
+    chapter('ECB penguin');
+    await expectNoAxeViolations(container);
+    act(() => fireEvent.keyDown(window, { key: 'End' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Show CBC large' }));
+    await expectNoAxeViolations(container);
+  }, 60_000);
 });
