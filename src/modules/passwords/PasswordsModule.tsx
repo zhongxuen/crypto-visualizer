@@ -18,7 +18,13 @@ import {
 import { PASSWORDS_SHARE, type PasswordsChapter } from '@/core/kdf/share';
 import type { PasswordsShareState } from '@/core/kdf/state';
 
-import { AttackerTable, tableStateAt, UsersTable } from './components/UsersView';
+import { PhaseContext } from './components/Phase';
+import {
+  AttackerTable,
+  PairView,
+  tableStateAt,
+  UsersTable,
+} from './components/UsersView';
 import { PASSWORDS_PAGE_CITATIONS } from './citations';
 import { PASSWORDS_CHAPTER_LIST, PASSWORDS_META } from './meta';
 import { EMPTY_RUN, tableRunFor } from './tableRun';
@@ -100,6 +106,7 @@ export function PasswordsModule({ walkthrough }: { walkthrough?: ReactNode }) {
   const event = view.event;
   const hasRun = result.events.length > 0;
   const table = event ? tableStateAt(result.events, view.index) : null;
+  const phaseId = hasRun ? (result.phases[view.phaseIndex]?.id ?? null) : null;
 
   return (
     <ModuleLayout
@@ -127,7 +134,9 @@ export function PasswordsModule({ walkthrough }: { walkthrough?: ReactNode }) {
         chapter === 'pbkdf2' ? <HexBinToggle value={format} onChange={setFormat} /> : null
       }
       lesson={
-        <ChapterContext.Provider value={chapter}>{walkthrough}</ChapterContext.Provider>
+        <ChapterContext.Provider value={chapter}>
+          <PhaseContext.Provider value={phaseId}>{walkthrough}</PhaseContext.Provider>
+        </ChapterContext.Provider>
       }
       controls={
         mode === 'free' && chapter !== 'cost' && runs ? (
@@ -184,14 +193,28 @@ export function PasswordsModule({ walkthrough }: { walkthrough?: ReactNode }) {
             salted={table.salted}
             lookups={table.lookups}
             current={event.kind === 'kdf.lookup' ? event.name : undefined}
+            pair={event.kind === 'kdf.collision' ? event.names : undefined}
+            step={view.index}
           />
-          {event.kind === 'kdf.table' ? <AttackerTable event={event} /> : null}
+          {event.kind === 'kdf.collision' ? (
+            <PairView event={event} users={table.users} step={view.index} />
+          ) : null}
+          {table.table || table.lookups.length > 0 ? (
+            <AttackerTable
+              table={table.table}
+              lookups={table.lookups}
+              current={event.kind === 'kdf.lookup' ? event : undefined}
+              salted={table.salted}
+              step={view.index}
+            />
+          ) : null}
         </div>
       ) : null}
 
       {event && chapter === 'pbkdf2' && runs ? (
         <runs.Pbkdf2Chapter
           event={event}
+          step={view.index}
           format={format}
           run={result}
           request={() => runs.pbkdf2Request(mode, state.input, typed)}
