@@ -1,10 +1,16 @@
 import type { RsaEvent } from '@/core/rsa/events';
 import type { RsaChapter } from '@/core/rsa/state';
+import { Morph } from '@/components/motion';
 import { cn } from '@/lib/cn';
+
+import { Placeholder } from './parts';
 
 /**
  * The formulas of RSA, filled in as the steps that compute them run. Values are read off
- * the events up to the current step; a value not reached yet shows as "?".
+ * the events up to the current step; a value not reached yet is a dashed placeholder,
+ * whose digits flip in (`<Morph>`) on the step that computes it. (Not `<Morph count>`:
+ * its spoken copy doubles the text for the whole step, which a share link, landing with
+ * no animation, would not match.)
  */
 
 type Slot = 'p' | 'q' | 'n' | 'phi' | 'e' | 'd' | 'm' | 'c' | 'back' | 'h' | 's' | 'v';
@@ -107,7 +113,7 @@ export function FormulaPanel({
       >
         Formulas so far
       </h2>
-      <dl className="border-border divide-border divide-y rounded-md border text-sm">
+      <dl className="border-border divide-border bg-surface divide-y rounded-md border text-sm">
         {rows.map((row) => {
           const value = known[row.slot];
           const working = value === undefined ? null : row.working?.(known);
@@ -118,21 +124,26 @@ export function FormulaPanel({
               data-testid={`rsa-formula-${row.slot}`}
               className={cn(
                 'grid gap-x-3 px-3 py-1.5 sm:grid-cols-[14rem_1fr]',
-                fresh && 'bg-highlight',
+                fresh && 'bg-surface-overlay',
               )}
+              data-fresh={fresh || undefined}
             >
               <dt className="text-fg-secondary">{row.formula}</dt>
-              <dd className="min-w-0 font-mono break-all">
-                {value === undefined ? (
-                  <span className="text-fg-muted">?</span>
-                ) : (
-                  <>
-                    {working ? (
-                      <span className="text-fg-secondary">{working} = </span>
-                    ) : null}
-                    <span className={cn(fresh && 'font-semibold')}>{value}</span>
-                  </>
-                )}
+              <dd
+                className="min-w-0 font-mono break-all"
+                data-state={value === undefined ? 'pending' : 'known'}
+              >
+                {value === undefined ? <Placeholder /> : null}
+                {/* Mounted while pending (at 0), so the digits flip in from 0 when it lands. */}
+                <span hidden={value === undefined}>
+                  {working ? (
+                    <span className="text-fg-secondary">{working} = </span>
+                  ) : null}
+                  <Morph
+                    value={value ?? '0'}
+                    className={cn(fresh && 'highlighter font-semibold')}
+                  />
+                </span>
               </dd>
             </div>
           );

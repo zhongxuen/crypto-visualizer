@@ -20,6 +20,7 @@ import { RSA_SHARE, type RsaChapter } from '@/core/rsa/share';
 
 import { EgcdView } from './components/EgcdView';
 import { FormulaPanel } from './components/FormulaPanel';
+import { PhaseContext } from './components/LessonPhase';
 import { KeyPairView, ModulusView, PrimeView, PrivateView } from './components/StepView';
 import { Value } from './components/parts';
 import { RSA_KEYS_CITATIONS } from './keysCitations';
@@ -54,6 +55,19 @@ function isDefaultInput(state: RsaState): boolean {
   );
 }
 
+/**
+ * One view per kind of step, kept mounted while steps of that kind follow each other (so
+ * the Euclid table writes itself and the ladder's running value morphs), and remounted
+ * when the kind changes (so q's card doesn't count down from p's value).
+ */
+function pictureKey(event: RsaEvent): string {
+  if (event.kind === 'rsa.prime') return event.id;
+  if (event.kind === 'rsa.powStep' || event.kind === 'rsa.powResult') {
+    return `${event.kind}-${event.op}`;
+  }
+  return event.kind;
+}
+
 /** The picture for one step: the keys chapter's views are static, the rest come with `runs`. */
 function StepPicture({ event, runs }: { event: RsaEvent; runs: Runs | null }) {
   switch (event.kind) {
@@ -64,17 +78,18 @@ function StepPicture({ event, runs }: { event: RsaEvent; runs: Runs | null }) {
     case 'rsa.totient':
       return (
         <div className="grid gap-3 sm:grid-cols-2">
-          <Value label="φ(n) = (p − 1)(q − 1)" value={event.phi} emphasis />
+          <Value label="φ(n) = (p − 1)(q − 1)" value={event.phi} emphasis kind="secret" />
           <Value
             label="λ(n) = lcm(p − 1, q − 1), used by RFC 8017"
             value={event.lambda}
+            kind="secret"
           />
         </div>
       );
     case 'rsa.chooseE':
       return (
         <div className="grid gap-3 sm:grid-cols-2">
-          <Value label="e" value={event.e} emphasis />
+          <Value label="e" value={event.e} emphasis kind="public" />
           <Value label="gcd(e, φ(n))" value={event.gcd} />
         </div>
       );
@@ -176,7 +191,11 @@ export function RsaModule({ walkthrough }: { walkthrough?: ReactNode }) {
         />
       }
       lesson={
-        <ChapterContext.Provider value={chapter}>{walkthrough}</ChapterContext.Provider>
+        <ChapterContext.Provider value={chapter}>
+          <PhaseContext.Provider value={event?.group ?? null}>
+            {walkthrough}
+          </PhaseContext.Provider>
+        </ChapterContext.Provider>
       }
       controls={
         mode === 'free' && runs ? (
@@ -230,7 +249,7 @@ export function RsaModule({ walkthrough }: { walkthrough?: ReactNode }) {
         </>
       ) : (
         <>
-          <StepPicture event={event} runs={runs} />
+          <StepPicture key={pictureKey(event)} event={event} runs={runs} />
           <FormulaPanel chapter={chapter} events={events} index={view.index} />
         </>
       )}

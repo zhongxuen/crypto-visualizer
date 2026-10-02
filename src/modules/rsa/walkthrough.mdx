@@ -1,5 +1,8 @@
 import { Chapter } from '@/components/lesson';
 
+import { Phase } from './components/LessonPhase';
+import { LessonTerm } from './components/LessonTerm';
+
 <Chapter id="keys">
 
 ## Making a key pair
@@ -7,15 +10,35 @@ import { Chapter } from '@/components/lesson';
 RSA is a **public-key** system: one key locks, a different key unlocks. The numbers here
 are small enough to check with a pencil: **p = 61**, **q = 53** and **e = 17**.
 
-1. Multiply the two secret primes: **n = 61 × 53 = 3233**. n is public.
-2. **φ(n) = (p − 1)(q − 1) = 60 × 52 = 3120**. Working it out needs p and q, so it stays
-   secret.
-3. Pick **e = 17**. It must share no factor with 3120, which it doesn't.
-4. Find **d** with **e × d ≡ 1 (mod 3120)**, using the extended Euclidean algorithm.
+<Phase group="Primes">
 
-Each row of the table is the row two above minus q times the row above, and every row
-keeps r = s × 3120 + t × 17. Here it is worked by hand. Step through and the table on the
-right should match it row for row:
+Start with two secret primes. To check 61, try every divisor up to its square root,
+⌊√61⌋ = 7: none of 2, 3, 5 or 7 goes in, so it is prime. A composite number always has a
+factor no bigger than its square root.
+
+</Phase>
+
+<Phase group="n and φ(n)">
+
+Multiply them: **n = 61 × 53 = 3233**. n is public. Then
+**<LessonTerm id="phi">φ(n)</LessonTerm> = (p − 1)(q − 1) = 60 × 52 = 3120**. Working it out needs p and q, so
+it stays secret.
+
+</Phase>
+
+<Phase group="Choose e">
+
+Pick **e = 17**. Its <LessonTerm id="gcd">GCD</LessonTerm> with 3120 must be 1 (no shared factor), and it
+is.
+
+</Phase>
+
+<Phase group="Extended Euclid">
+
+Now find **d** with **e × d ≡ 1 (<LessonTerm id="mod">mod</LessonTerm> 3120)**, using the extended Euclidean
+algorithm. Each row is the row two above minus q times the row above, and every row keeps
+r = s × 3120 + t × 17. Here it is worked by hand; the table on the right should match it
+row for row:
 
 | Row |   q |    r |   s |    t |
 | --: | --: | ---: | --: | ---: |
@@ -29,23 +52,43 @@ right should match it row for row:
 Row 4 has r = 1 = 2 × 3120 − 367 × 17, so −367 × 17 ≡ 1. Add 3120 to make it positive:
 **d = 2753**. Check: 17 × 2753 = 46801 = 15 × 3120 + 1.
 
+</Phase>
+
+<Phase group="Key pair">
+
+The public key is **(n, e) = (3233, 17)**: anyone may have it. The private key is
+**d = 2753**, and p, q and φ(n) stay secret with it.
+
+</Phase>
+
 </Chapter>
 
 <Chapter id="encrypt">
 
 ## Encrypt and decrypt
 
-RSA works on numbers below n. To encrypt **m = 65**, anyone can use the public key:
-**c = m^e mod n = 65^17 mod 3233**. Only the owner of d can undo it:
-**m = c^d mod n**.
+<Phase group="Key">
 
+RSA works on numbers below n, with the key pair from the first chapter.
+
+</Phase>
+
+<Phase group="Encrypt">
+
+To encrypt **m = 65**, anyone can use the public key: **c = m^e mod n = 65^17 mod 3233**.
 Nobody computes 65^17 and then divides. **Square-and-multiply** reads the exponent in
-binary, 17 = `10001`, from the top bit: square the running value at every bit, and also
-multiply by m when the bit is 1, reducing mod n each time. Five bits, five squarings, two
-multiplications. The clock shows the running value moving round mod n.
+binary, 17 = `10001`, from the top bit: square at every bit, and also multiply by m when
+the bit is 1, reducing mod n each time. Five bits, five squarings, two multiplications:
+**c = 2790**.
 
-Encrypting gives **c = 2790**. Decrypting takes twelve bits of d = 2753 = `101011000001`
-and lands back on **65**.
+</Phase>
+
+<Phase group="Decrypt">
+
+Only the owner of d can undo it: **m = c^d mod n**. That takes twelve bits of
+d = 2753 = `101011000001` and lands back on **65**.
+
+</Phase>
 
 </Chapter>
 
@@ -53,17 +96,35 @@ and lands back on **65**.
 
 ## Sign and verify
 
-Run the key the other way round and you get a **signature**. Hash the message, then use
-the _private_ key: **s = h^d mod n**. Anyone can check it with the public key:
-**s^e mod n** must equal h.
+<Phase group="Key">
 
-The hash is SHA-256 of "Pay Bob 10". A SHA-256 digest is a 256-bit number and n is only
-3233, so here it is **reduced mod n**. That is a toy shortcut, and it makes collisions
-easy. Real signatures use n of 2048 bits or more and encode the whole hash (PKCS #1 v1.5
-or PSS).
+Run the key the other way round and you get a **signature**: the private key signs, and
+the public key checks.
 
-The last step adds one character to the message ("Pay Bob 10!"). Its hash changes, and the same
-signature no longer verifies.
+</Phase>
+
+<Phase group="Hash">
+
+First, take the <LessonTerm id="hash">hash</LessonTerm> of the message: SHA-256 of "Pay Bob 10". A SHA-256
+digest is a 256-bit number and n is only 3233, so here it is **reduced mod n**. That is a
+toy shortcut that makes collisions easy; real signatures use n of 2048 bits or more and
+encode the whole hash (PKCS #1 v1.5 or PSS).
+
+</Phase>
+
+<Phase group="Sign">
+
+The hash goes to the _private_ key, and the signature comes back: **s = h^d mod n**.
+
+</Phase>
+
+<Phase group="Verify">
+
+Anyone can check it with the public key: **s^e mod n** must equal h. The last step adds
+one character to the message ("Pay Bob 10!"). Its hash changes, and the same signature
+no longer verifies.
+
+</Phase>
 
 </Chapter>
 
@@ -71,16 +132,33 @@ signature no longer verifies.
 
 ## Why textbook RSA is unsafe
 
+<Phase group="Key">
+
 Everything so far is **textbook RSA**: no padding. It has a property an attacker loves:
 it is **multiplicative**. (2m)^e = m^e × 2^e (mod n).
 
-The attacker never learns d. They see c, work out 2^e mod n from the public key, and
-send c × 2^e instead. The receiver decrypts **2m** and has no way to tell. A second
-problem: with a small e like 3 and a small m, m^e never reaches n, so c is a plain cube
-and a cube root gives m back.
+</Phase>
+
+<Phase group="Tamper">
+
+The attacker never learns d. They see c, work out 2^e mod n from the public key, and send
+c × 2^e instead. The receiver decrypts **2m** and has no way to tell.
+
+</Phase>
+
+<Phase group="Small e">
+
+A second problem: with a small e like 3 and a small m, m^e never reaches n, so c is a
+plain cube and a cube root gives m back.
+
+</Phase>
+
+<Phase group="The fix: padding">
 
 Real RSA pads first. **OAEP** (for encryption) and **PSS** (for signatures) add
 randomised, structured padding, which breaks both attacks. They are described here, not
 implemented. None of these keys may protect real data.
+
+</Phase>
 
 </Chapter>

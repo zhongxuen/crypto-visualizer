@@ -1,7 +1,8 @@
 import type { RsaActor, RsaEvent } from '@/core/rsa/events';
+import { Morph, Pulse } from '@/components/motion';
 import { cn } from '@/lib/cn';
 
-import { Value } from './parts';
+import { Label, Value } from './parts';
 
 /**
  * The malleability attack as three actors side by side. Each column lists what that
@@ -54,39 +55,93 @@ export function MalleabilityStrip({
   const seen = events.slice(0, index + 1);
 
   return (
-    <ol aria-label="Sender, attacker and receiver" className="grid gap-3 md:grid-cols-3">
-      {ACTORS.map((actor) => {
-        const mine = seen.filter((e) => 'actor' in e && e.actor === actor.id);
-        const active = acting === actor.id;
-        return (
-          <li
-            key={actor.id}
-            aria-current={active ? 'step' : undefined}
-            aria-labelledby={`rsa-actor-${actor.id}`}
-            className={cn(
-              'bg-surface flex min-w-0 flex-col gap-2 rounded-lg p-3',
-              active ? 'border-accent border-2' : 'border-border border',
-            )}
-          >
-            <h2 id={`rsa-actor-${actor.id}`} className="font-semibold">
-              {actor.title}
-            </h2>
-            <p className="text-fg-muted text-xs">{actor.blurb}</p>
-            {mine.length === 0 ? <p className="text-fg-muted text-sm">Waiting.</p> : null}
-            {mine.flatMap((event) =>
-              lines(event).map((line) => (
-                <Value
-                  key={`${event.id}-${line.label}`}
-                  label={line.label}
-                  value={line.value}
-                  emphasis={line.key && event === current}
-                />
-              )),
-            )}
-          </li>
-        );
-      })}
-    </ol>
+    <div className="flex flex-col gap-3">
+      <Wire events={events} index={index} />
+      <ol
+        aria-label="Sender, attacker and receiver"
+        className="grid gap-3 md:grid-cols-3"
+      >
+        {ACTORS.map((actor) => {
+          const mine = seen.filter((e) => 'actor' in e && e.actor === actor.id);
+          const active = acting === actor.id;
+          return (
+            <li
+              key={actor.id}
+              aria-current={active ? 'step' : undefined}
+              aria-labelledby={`rsa-actor-${actor.id}`}
+              className={cn(
+                'flex min-w-0 flex-col gap-2 rounded-lg p-3',
+                !active && 'bg-surface',
+                active
+                  ? 'border-border-strong bg-surface-overlay border-2'
+                  : 'border-border border',
+              )}
+            >
+              <h2 id={`rsa-actor-${actor.id}`} className="font-semibold">
+                {actor.title}
+              </h2>
+              <p className="text-fg-muted text-xs">{actor.blurb}</p>
+              {mine.length === 0 ? (
+                <p className="text-fg-muted text-sm">Waiting.</p>
+              ) : null}
+              {mine.flatMap((event) =>
+                lines(event).map((line) => (
+                  <Value
+                    key={`${event.id}-${line.label}`}
+                    label={line.label}
+                    value={line.value}
+                    emphasis={line.key && event === current}
+                  />
+                )),
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+/**
+ * What is on the wire and what it decrypts to (UIUX §7.2): when the attacker multiplies
+ * the ciphertext, the decrypted value morphs in step, from m to 2m. Both numbers are
+ * core's (the send, forge and receive events); before the receiver acts, "decrypts to"
+ * reads the receive event's k·m ahead of time, which is what the forgery is built to give.
+ */
+function Wire({ events, index }: { events: readonly RsaEvent[]; index: number }) {
+  const seen = events.slice(0, index + 1);
+  const send = seen.find((e) => e.kind === 'rsa.mallSend');
+  const forge = seen.find((e) => e.kind === 'rsa.mallForge');
+  const receive = events.find((e) => e.kind === 'rsa.mallReceive');
+  if (!send || send.kind !== 'rsa.mallSend') return null;
+  const forged = forge?.kind === 'rsa.mallForge' ? forge : null;
+  const doubled = receive?.kind === 'rsa.mallReceive' ? receive : null;
+  const wire = forged ? forged.forged : send.c;
+  const reads = forged && doubled ? doubled.km : send.m;
+  return (
+    <section
+      aria-label="On the wire"
+      data-testid="rsa-wire"
+      data-forged={forged ? 'true' : 'false'}
+      className="border-border bg-surface rounded-token grid gap-3 border p-3 sm:grid-cols-2"
+    >
+      <div className="flex flex-col gap-1">
+        <Label>
+          {forged ? 'Ciphertext on the wire: c′ = c × 2ᵉ' : 'Ciphertext on the wire: c'}
+        </Label>
+        <Pulse trigger={wire} active={Boolean(forged)} className="self-start">
+          <span className="font-mono text-lg font-semibold">
+            <Morph value={wire} />
+          </span>
+        </Pulse>
+      </div>
+      <div className="flex flex-col gap-1">
+        <Label>{forged ? 'Decrypts to: 2 × m' : 'Decrypts to: m'}</Label>
+        <span className={cn('font-mono text-lg font-semibold', forged && 'text-danger')}>
+          <Morph value={reads} count />
+        </span>
+      </div>
+    </section>
   );
 }
 

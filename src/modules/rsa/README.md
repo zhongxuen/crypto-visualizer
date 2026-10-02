@@ -13,16 +13,29 @@ Renders the runs in `src/core/rsa`. It computes nothing itself.
   registry and free play's form.
 - `components/Inputs.tsx`: the free-play inputs. The prime pickers say "is it prime?" as
   you type, using core's trial division (for example "p = 91 is not prime: 7 × 13").
-- `components/FormulaPanel.tsx`: n = p × q, φ(n), e, d, then c, m or h, s. Each fills in
-  when the step that computes it runs, and the value this step added is highlighted.
-- `components/EgcdView.tsx`: the extended Euclid table in a `NumberTrace`, one row per
-  step. It matches the hand-worked table in `walkthrough.mdx`.
-- `components/PowView.tsx`: square-and-multiply in a `NumberTrace`. The exponent's bits
-  are shown with the current bit marked, and the running value is on a `ModClock` (a
-  number line above 120). Realistic mode shows a single summary step with digit counts.
+- `components/parts.tsx`: `Value`, a read-only value card (no input-like outline;
+  the step's key value gets the highlighter; 🔒 secret / 📡 public tag), and the dashed
+  `Placeholder` for values not computed yet.
+- `components/FormulaPanel.tsx`: n = p × q, φ(n), e, d, then c, m or h, s. Unknowns are
+  dashed placeholders; each fills (digits flip in with `<Morph>`) when the step that
+  computes it runs.
+- `components/StepView.tsx`: the primes (trial divisors 2, 3, 5, … ⌊√p⌋ tick past with
+  a ✗, then a "prime" stamp), n, d and the key pair.
+- `components/EgcdView.tsx`: the extended Euclid table writing itself, one row per step;
+  the two rows each new row comes from are hatched, with the working spelled out. It
+  matches the hand-worked table in `walkthrough.mdx`.
+- `components/PowView.tsx`: square-and-multiply as a ladder of the exponent's bits. The
+  current rung lights (square, then multiply on a 1 bit), rungs to come are dashed, and
+  the running value morphs and turns on a `ModClock`. Signing and verifying show the trip
+  h → private key → s and s → public key → check, the result travelling back from the key.
+  Realistic mode shows a single summary step with digit counts.
 - `components/MalleabilityStrip.tsx`: sender, attacker and receiver side by side for the
-  2ᵉ attack. It also has the small-e cube root, and OAEP and PSS (described only).
-- `components/StepView.tsx`: the primes, n, d, the key pair, the message, the hash and
-  the tampered-message check.
+  2ᵉ attack, under a "wire" card where multiplying c morphs what it decrypts to, m → 2m.
+  It also has the small-e cube root, and OAEP and PSS (described only).
+- `components/ChapterViews.tsx`: the message, the hash and the tampered-message check.
+- `components/LessonPhase.tsx`: `<Phase group>` in `walkthrough.mdx`, one short paragraph
+  per group of the run; the page marks the one for the step on screen.
+- `components/LessonTerm.tsx`: the shared `<Term>`, loaded right after hydration, because
+  it brings the whole glossary (about 2 KB gzipped) that /rsa's first load can't afford.
 - `shareState.ts`: `{ m: 'rsa', v: 1, seed, step, input: { chapter, mode, p?, q?, e?, msg, text, bits } }`.
   None of these is a password. The keys are for display only.
