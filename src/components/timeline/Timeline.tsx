@@ -122,7 +122,9 @@ export const Timeline = memo(function Timeline({
         <span className="truncate">{phase}</span>
         <span className="shrink-0 font-mono">
           {empty ? 0 : index + 1} / {count}
-          {remaining ? <span className="max-md:hidden"> · {remaining}</span> : null}
+          {/* Only from lg: between md and lg the dock's buttons leave the scrubber too
+              narrow, and the hint ran under the speed control. */}
+          {remaining ? <span className="max-lg:hidden"> · {remaining}</span> : null}
         </span>
       </div>
     </div>

@@ -1,7 +1,7 @@
 # Crypto Visualizer — UI/UX and motion plan
 
 Written: 2026-10-01
-Status: **[in progress]** — waves 0 and 1 done (2026-10-02); wave 2 next.
+Status: **[done]** — waves 0–3 done and wave 4's QA pass recorded in §10 (2026-10-02).
 Applies to: every route in `src/app`, every shared component in `src/components`, every
 module in `src/modules`. Core (`src/core`) is not touched by this plan.
 
@@ -514,11 +514,11 @@ change goes in a wave 1 follow-up.
 
 | Wave | Prompts | Runs | Depends on |
 |---|---|---|---|
-| W0 — fix | U0.1 bugs, U0.2 bundle budget | serial | — |
+| W0 — fix **(done)** | U0.1 bugs, U0.2 bundle budget | serial | — |
 | W1 — foundation **(done)** | U1.1 theme + type + motion primitives, U1.2 shell + workspace layout, U1.3 home page | serial | W0 |
-| W2 — modules | U2.1 XOR, U2.2 Hashing, U2.3 Passwords, U2.4 AES, U2.5 RSA, U2.6 DH | **parallel (6)** | W1 |
-| W3 — site | U3.1 learning path + glossary, U3.2 about + 404 | serial | W2 |
-| W4 — QA + release | U4.1 QA pass, U4.2 deploy | serial | W3 |
+| W2 — modules **(done)** | U2.1 XOR, U2.2 Hashing, U2.3 Passwords, U2.4 AES, U2.5 RSA, U2.6 DH | **parallel (6)** | W1 |
+| W3 — site **(done)** | U3.1 learning path + glossary, U3.2 about + 404 | serial | W2 |
+| W4 — QA + release **(done)** | U4.1 QA pass, U4.2 deploy | serial | W3 |
 
 **Wave 1 notes (2026-10-02).** `cn` is now a plain class join: tailwind-merge (8.4 KB on
 every route) is a dev dependency only, and `tests/setup.ts` fails any rendered `cn` call
@@ -529,6 +529,14 @@ and `/` is 141.1 KB, all below their pre-wave sizes. B5 is fixed for Σ, σ and 
 use a system font. Module pages now pass their pieces to `ModuleLayout`'s slots
 (`chapters`, `tools`, `lesson`, `controls`, `step`, `share`); wave 2 builds on those, on
 `src/components/motion` and on `<Term>`.
+
+**Wave 3 notes (2026-10-02).** Progress now records chapters as well as modules
+(`slug/chapter` in `cv:v1`) and the chapter last opened, through `useLessonProgress`;
+`/learn` reads both. `/learn`'s chapter links are encoded on the server, so zod stays out
+of its JS. The completion card loads with each module's `runs.ts`. To pay for the new nav
+and progress code, `<Term>` now loads its definitions after hydration
+(`glossaryTerms.ts` holds the words alone), which took about 1.1 KB off every module route
+except `/rsa`, which already deferred `Term` through its own `LessonTerm`.
 
 Acceptance for every prompt: `npm run verify` passes, including `perf:bundles` (no route
 over 170 KB); `npm run test:e2e` passes (axe in both themes, keyboard, reduced motion);
@@ -770,3 +778,97 @@ https://crypto-visualizer-sigma.vercel.app and every module route return 200, th
 security headers are present, and the home page and /aes render in light and dark.
 Report the deployment URL and anything that differs from the local build.
 ```
+
+---
+
+## 10. QA results
+
+Run 2026-10-02 (U4.1) on a production build (`next build && next start -p 3100`), at
+1366×768, 768×1024 and 390×844, light and dark, with Chromium. Every route was
+screenshotted at all six combinations and checked for horizontal overflow (none) and page
+errors (none; the only console error is the 404 page's own 404 status).
+
+### Checks
+
+- [x] `npm run verify`: lint, typecheck, 833 unit tests, `src/core` coverage over 95%,
+      build, bundle budget.
+- [x] `npm run test:e2e`: 191 tests, including axe on every route (now with `/learn` and
+      `/glossary`) in light, dark and dark-by-toggle; keyboard-only walkthroughs per
+      module; reduced motion per module; share-link round trips; invalid `?s=`.
+- [x] Colour-blind screenshots (`e2e/colour-blind.spec.ts`): the SHA-256 and AES avalanche
+      views still read under protanopia and deuteranopia: the changed byte is hatched and
+      flipped bits are filled against hollow ones.
+- [x] Reduced motion: no autoplay, transitions collapse to nothing, the completion card's
+      confetti isn't rendered, and the home demo's highlighter doesn't run.
+
+### §2 pain points
+
+- [x] P1 Start here: the home hero's single call to action, the path on `/`, and `/learn`
+      with chapters, ticks and "resume where you left off" (which moves on to the next
+      module once one is finished).
+- [x] P2 Picture first: the visual is on the first screen at 1366×768 and 390×844
+      (`e2e/layout.spec.ts`).
+- [x] P3 Jargon: `<Term>` in every walkthrough, each linking to its `/glossary` entry.
+- [x] P4 No repeated headline: the inspector is "Why?" plus the citation chip.
+- [x] P5 Disclaimer once: the header chip, the footer and `/about`.
+- [x] P6 Shortcuts: the `?` sheet in the dock.
+- [x] P7 Phase lengths: phase segments on the scrubber, "Skip this phase", time left.
+- [x] P8 Free play keeps the lesson, folded.
+- [x] P9 Clean URL until the state differs; "Copy link to this step".
+- [x] P10 Theme menu: Light · System · Dark, labelled.
+- [x] P11 Completion: the card with what you learned, the next module and the hex
+      confetti; chapter ticks in the tabs and on `/learn`.
+- [x] §2.2 per-module fixes: done in wave 2 (U2.1–U2.6).
+- [x] §2.3 `/about` sectioned with a sticky contents list, the real / simplified /
+      described summary and test-vector cards checked against the tests
+      (`tests/about-facts.test.ts`); the friendly 404.
+
+### §3 bugs
+
+- [x] B0 production URL, B1 tables, B3 transport ends, B4 RSA value card, B6 header
+      56 px, B7 44 px targets, B8 one-row dock, B9 mode switch slot, B10 phase list,
+      B11 `?s=` at defaults, B12 penguin placeholders.
+- [x] B2 budget: every module route under 170 KB (table below).
+- [ ] B5, partly: Σ, σ and φ render in JetBrains Mono; ⊕ and ≡ still fall back to a
+      system font, because Google's font subsets don't carry them. Fixing it means
+      self-hosting a full JetBrains Mono file, which costs no JS.
+
+### Found and fixed in this pass
+
+- At 768×1024 a short stage left the dock in the page flow above the footer while the
+  lesson sheet stayed fixed to the viewport, so the sheet floated over the footer. The
+  module workspace is now at least one screen tall (`ModuleLayout`).
+- At 768 wide the scrubber's "1 / 116 · about 70 s left" ran under the speed control. The
+  time-left hint now shows from `lg` up. Both have a regression test at 768×1024
+  (`e2e/layout.spec.ts`).
+- A key pressed just as a module page became ready could be undone: the link's step was
+  applied in an effect right after `data-share-ready` appeared, and a link at step 0
+  seeked back to the start. A run already starts at 0, so that seek is skipped
+  (`useRunView`, unit-tested). This was behind two intermittent e2e failures under load.
+- `/learn`'s resume pointed back into a module the learner had just finished.
+- A stray debug file (`phases.tmp.test.ts`) was committed in U1.2; removed.
+- The RFC 7914 80,000-iteration PBKDF2 vector could pass vitest's 5 s default under the
+  full coverage run; it has a 30 s timeout now (the vector is unchanged).
+
+### §7 animations
+
+Checked by the unit tests rather than by eye at every speed: each primitive plays on a
+single step, jumps to its end frame on a seek and under reduced motion
+(`src/components/motion/motion.test.tsx`), and the module motion tests cover their own
+views (`AesMotion.test.tsx` and the module UI tests). The completion card's burst was
+checked in the browser.
+
+### First-load JS (gzip), against the 170 KB budget
+
+| Route | KB | | Route | KB |
+|---|---:|---|---|---:|
+| `/rsa` | 169.1 | | `/demo` (not budgeted) | 163.0 |
+| `/aes` | 168.8 | | `/learn` | 142.2 |
+| `/passwords` | 168.8 | | `/` | 141.5 |
+| `/dh` | 168.3 | | `/about` | 140.6 |
+| `/xor` | 166.3 | | `/glossary` | 140.6 |
+| `/hashing` | 165.5 | | 404 | 140.6 |
+
+Headroom is thin on `/rsa`, `/aes` and `/passwords` (about 1 KB). The next real lever is
+the shared shell: the module menu and progress code ride on every route.
+

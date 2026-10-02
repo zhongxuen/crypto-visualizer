@@ -218,6 +218,39 @@ test.describe('the learning path, glossary and 404 (UIUX wave 3)', () => {
     );
   });
 
+  test('/learn moves on to the next module once the last one is finished', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'cv:v1',
+        JSON.stringify({
+          v: 1,
+          completed: ['xor'],
+          resume: { slug: 'xor', chapter: 'ttp' },
+        }),
+      );
+    });
+    await page.goto('/learn');
+    await page
+      .getByRole('link', { name: 'Continue with module 2: Hashing and MACs' })
+      .click();
+    await expect(page).toHaveURL(/\/hashing$/);
+  });
+
+  test('a term in a walkthrough opens its definition and its glossary entry', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await openModule(page, '/xor');
+    const lesson = page.getByRole('complementary', { name: 'Lesson' });
+    await lesson.getByRole('button', { name: 'UTF-8', exact: true }).click();
+    await expect(lesson).toContainText('The rule that turns text into bytes.');
+    await lesson.getByRole('link', { name: 'Glossary' }).click();
+    await expect(page).toHaveURL(/\/glossary#utf-8$/);
+    await expect(page.locator('[id="utf-8"]')).toBeInViewport();
+  });
+
   test('a first visit to /learn starts at module 1', async ({ page }) => {
     await page.goto('/learn');
     await page.getByRole('link', { name: /Start with Bits, bytes and XOR/ }).click();

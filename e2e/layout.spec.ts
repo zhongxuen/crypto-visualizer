@@ -140,6 +140,31 @@ test.describe('on a laptop (1366×768)', () => {
   });
 });
 
+test.describe('on a tablet (768×1024)', () => {
+  test.use({ viewport: { width: 768, height: 1024 } });
+
+  for (const route of MODULE_ROUTES) {
+    test(`${route.path}: the dock sits on the bottom edge, with the lesson sheet on it`, async ({
+      page,
+    }) => {
+      await openModule(page, route.path);
+      // A short stage must not leave the dock mid-page with the sheet floating below it.
+      const dock = await box(page, '[role="region"][aria-label="Timeline"]');
+      expect(Math.round(dock.y + dock.height)).toBe(1024);
+      const sheet = await box(page, 'aside[aria-label="Lesson"]');
+      expect(Math.abs(sheet.y + sheet.height - dock.y)).toBeLessThanOrEqual(1);
+      // Nothing in the dock's scrubber runs under the speed control.
+      const speed = await box(page, '[role="region"][aria-label="Timeline"] label');
+      const count = await page
+        .locator('[role="region"][aria-label="Timeline"] .font-mono')
+        .filter({ hasText: '/' })
+        .first()
+        .boundingBox();
+      expect(count!.x + count!.width).toBeLessThanOrEqual(speed.x);
+    });
+  }
+});
+
 test.describe('share links are deliberate (P9, B11)', () => {
   test('the URL stays clean at the defaults and grows once you step', async ({
     page,
@@ -159,6 +184,7 @@ test.describe('share links are deliberate (P9, B11)', () => {
     await openModule(page, '/hashing');
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('status')).toContainText('Step 3 of');
     await page.getByRole('button', { name: 'Copy link to this step' }).click();
     await expect(page.getByText('Link copied.')).toBeVisible();
     const copied = await page.evaluate(() => navigator.clipboard.readText());

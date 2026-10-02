@@ -63,8 +63,12 @@ export default function LearnPage() {
 
       <ResumeCard
         places={places}
-        start={{ href: ready[0].entry.route, title: ready[0].entry.title }}
-        total={ready.length}
+        modules={ready.map(({ entry, chapters }) => ({
+          slug: entry.slug,
+          number: entry.number,
+          title: entry.title,
+          href: chapters[0].href,
+        }))}
       />
 
       <ol className="flex flex-col gap-4" aria-label="Modules in order">

@@ -21,41 +21,76 @@ export interface ResumePlace {
   chapterTitle: string;
 }
 
-/** "Resume where you left off", or "Start with module 1" for a first visit. */
+export interface PathStop {
+  slug: string;
+  number: number;
+  title: string;
+  /** The module's first chapter. */
+  href: string;
+}
+
+/**
+ * Where to go next: back into the chapter last opened, or, once that module is finished,
+ * on to the next unfinished one. "Start with module 1" on a first visit.
+ */
 export function ResumeCard({
   places,
-  start,
-  total,
+  modules,
 }: {
   /** Every chapter's link, keyed `slug/chapter` (`chapterProgressId`). */
   places: Record<string, ResumePlace>;
-  start: { href: string; title: string };
-  /** How many modules are built, for "2 of 6 finished". */
-  total: number;
+  /** The built modules, in order. */
+  modules: readonly PathStop[];
 }) {
   const { progress } = useProgress();
-  const resume = progress.resume
-    ? places[chapterProgressId(progress.resume.slug, progress.resume.chapter)]
-    : undefined;
-  const finished = progress.completed.filter((id) => !id.includes('/')).length;
+  const done = (slug: string) => progress.completed.includes(slug);
+  const place = progress.resume;
+  const resume =
+    place && !done(place.slug)
+      ? places[chapterProgressId(place.slug, place.chapter)]
+      : undefined;
+  const finished = modules.filter((m) => done(m.slug)).length;
+  const after = modules.find((m) => m.slug === place?.slug)?.number ?? 0;
+  const next =
+    modules.find((m) => m.number > after && !done(m.slug)) ??
+    modules.find((m) => !done(m.slug));
+
+  let heading: string;
+  let action: { href: string; label: string };
+  if (resume) {
+    heading = 'Pick up where you left off';
+    action = {
+      href: resume.href,
+      label: `Resume module ${resume.moduleNumber}: ${resume.chapterTitle}`,
+    };
+  } else if (next && finished === 0 && !place) {
+    heading = 'New here? Start at the beginning.';
+    action = { href: next.href, label: `Start with ${next.title}` };
+  } else if (next) {
+    heading = 'Ready for the next module';
+    action = {
+      href: next.href,
+      label: `Continue with module ${next.number}: ${next.title}`,
+    };
+  } else {
+    heading = 'Every module finished. TLS 1.3 comes next.';
+    action = { href: modules[0].href, label: `Revisit ${modules[0].title}` };
+  }
 
   return (
     <div className="border-border bg-surface flex flex-col gap-3 rounded-(--radius) border p-4 md:flex-row md:items-center md:justify-between md:p-5">
       <div className="flex flex-col gap-1">
-        <p className="font-medium">
-          {resume ? 'Pick up where you left off' : 'New here? Start at the beginning.'}
-        </p>
+        <p className="font-medium">{heading}</p>
         <p className="text-fg-secondary text-sm" data-testid="path-progress">
-          {finished} of {total} modules finished. Your progress stays in this browser.
+          {finished} of {modules.length} modules finished. Your progress stays in this
+          browser.
         </p>
       </div>
       <Link
-        href={resume ? resume.href : start.href}
+        href={action.href}
         className="bg-accent text-accent-fg focus-visible:outline-focus min-h-target inline-flex items-center gap-2 self-start rounded-md px-4 text-sm font-medium hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 md:self-auto"
       >
-        {resume
-          ? `Resume module ${resume.moduleNumber}: ${resume.chapterTitle}`
-          : `Start with ${start.title}`}
+        {action.label}
         <ArrowRight aria-hidden="true" className="size-4" />
       </Link>
     </div>

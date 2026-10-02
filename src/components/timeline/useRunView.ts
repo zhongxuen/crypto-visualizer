@@ -45,6 +45,9 @@ export function useRunView<E extends { label: string }>(
   useEffect(() => {
     if (initialStep === undefined || initialStep === applied.current) return;
     applied.current = initialStep;
+    // Step 0 is where every run starts. Seeking there would only undo a key pressed in
+    // the moment between the page marking itself ready and this effect running.
+    if (initialStep === 0) return;
     const last = result.events.length - 1;
     if (last >= 0) store.getState().seekStep(Math.min(initialStep, last));
   }, [initialStep, result, store]);

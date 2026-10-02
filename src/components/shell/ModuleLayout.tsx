@@ -218,7 +218,14 @@ export function ModuleLayout({
       <ShareLinkContext.Provider value={share ?? null}>
         <StepTransitionProvider step={step}>
           <div
-            className={cn('flex flex-1 flex-col', className)}
+            className={cn(
+              'flex flex-1 flex-col',
+              // At least a screen below the 56 px header, so the dock (sticky) always
+              // sits on the bottom edge, where the lesson sheet (fixed) expects it,
+              // even when the stage is short.
+              timeline && 'min-h-[calc(100dvh-3.5rem)]',
+              className,
+            )}
             style={style}
             data-share-ready={share ? share.ready : undefined}
             data-hydrated={hydrated || undefined}

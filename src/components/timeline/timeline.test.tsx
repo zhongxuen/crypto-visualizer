@@ -15,6 +15,7 @@ import { StepCaption } from './StepCaption';
 import { timeLeft, TimelineBar } from './TimelineBar';
 import { createPlaybackStore, usePlayback, useStepIndex } from './usePlayback';
 import { usePlaybackKeys } from './usePlaybackKeys';
+import { useRunView } from './useRunView';
 
 type E = EventBase & { kind: 't' };
 
@@ -106,6 +107,23 @@ describe('playback store', () => {
     expect(hook.current.index).toBe(2);
     rerender({ result: blocks(), initialStep: 0 });
     expect(hook.current.index).toBe(0);
+  });
+
+  it('a link at step 0 does not undo a step taken as the page became ready', () => {
+    // The page marks itself ready when the link is read, and the link's step lands in an
+    // effect just after; a key pressed in between must survive it.
+    const run = sample();
+    const { result: hook, rerender } = renderHook(
+      ({ initialStep }: { initialStep?: number }) =>
+        useRunView(run, { initialStep, keys: false }),
+      { initialProps: {} },
+    );
+    act(() => hook.current.store.getState().seekStep(3));
+    rerender({ initialStep: 0 });
+    expect(hook.current.index).toBe(3);
+    // A link to a later step still lands.
+    rerender({ initialStep: 1 });
+    expect(hook.current.index).toBe(1);
   });
 
   it('keeps the playhead when an identical run is rebuilt', () => {
