@@ -7,7 +7,13 @@ export {
   type PlaybackCommand,
   type PlaybackShortcut,
 } from './keymap';
-export { PhaseStepper, type PhaseStepperProps } from './PhaseStepper';
+export { CopyLinkButton, ShortcutSheet } from './DockExtras';
+export {
+  groupPhases,
+  PhaseStepper,
+  type PhaseGroup,
+  type PhaseStepperProps,
+} from './PhaseStepper';
 export {
   BUTTON,
   PlaybackControls,
@@ -16,7 +22,7 @@ export {
 } from './PlaybackControls';
 export { StepCaption, type StepCaptionProps } from './StepCaption';
 export { Timeline, type TimelineProps } from './Timeline';
-export { TimelineBar, type TimelineBarProps } from './TimelineBar';
+export { timeLeft, TimelineBar, type TimelineBarProps } from './TimelineBar';
 export { useMediaQuery, useReducedMotion } from './useMediaQuery';
 export {
   createPlaybackStore,

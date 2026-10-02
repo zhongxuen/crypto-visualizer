@@ -79,8 +79,8 @@ export const BitDiffStrip = memo(function BitDiffStrip({
                 key={i}
                 data-flipped={bit.flipped || undefined}
                 className={cn(
-                  'inline-flex items-center justify-center rounded-[2px] font-mono leading-none',
-                  showDigits ? 'size-4 text-[0.6rem]' : 'size-2.5',
+                  'inline-flex items-center justify-center rounded-[2px] font-mono',
+                  showDigits ? 'size-4 text-[0.6rem]' : 'size-2.5 leading-none',
                   (r * perRow + i) % 8 === 0 && i !== 0 && 'ml-0.5',
                   bit.flipped
                     ? 'bg-diff-on text-diff-on-fg'

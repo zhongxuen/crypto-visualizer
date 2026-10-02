@@ -6,10 +6,10 @@ const C1_CIPHERTEXT = '69c4e0d86a7b0430d8cdb78070b4c55a';
 /** Input, round 0, rounds 1–9 × 4, round 10 × 3, output. */
 const BLOCK_STEPS = 1 + 1 + 9 * 4 + 3 + 1;
 
-/** The share link is written only after hydration, so it marks "keys will work". */
+/** The page marks itself once the share state is read (after hydration): keys work then. */
 async function open(page: Page, url = '/aes') {
   await page.goto(url);
-  await expect(page).toHaveURL(/\?s=/);
+  await expect(page.locator('[data-share-ready="true"]')).toHaveCount(1);
 }
 
 async function linkHasStep(page: Page, step: number) {

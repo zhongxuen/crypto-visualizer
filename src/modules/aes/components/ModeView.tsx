@@ -34,10 +34,10 @@ function Box({
   return (
     <div
       className={cn(
-        'flex min-w-0 flex-col items-center rounded-md border px-3 py-1.5 text-center',
+        'flex min-w-0 flex-col items-center rounded-md px-3 py-1.5 text-center',
         tone === 'cipher' && 'border-accent bg-surface-overlay border-2 font-semibold',
         tone === 'result' && 'border-accent bg-surface border-2',
-        tone === 'plain' && 'border-border bg-surface',
+        tone === 'plain' && 'border-border bg-surface border',
       )}
     >
       <span className="text-fg-muted text-xs">{name}</span>
@@ -142,11 +142,11 @@ function Chain({ blocks, upTo }: { blocks: readonly AesModeBlockEvent[]; upTo: n
               key={b.id}
               aria-current={b.block === upTo ? 'step' : undefined}
               className={cn(
-                'flex w-36 flex-col gap-0.5 rounded-md border px-2 py-1 font-mono text-xs',
+                'flex w-36 flex-col gap-0.5 rounded-md px-2 py-1 font-mono text-xs',
                 b.block === upTo ? 'ring-accent ring-2' : '',
                 repeat
                   ? 'border-diff-on pattern-changed border-2'
-                  : 'border-border bg-surface',
+                  : 'border-border bg-surface border',
               )}
             >
               <span className="text-fg-muted font-sans">Block {b.block + 1}</span>

@@ -97,7 +97,7 @@ function EveToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => v
       type="button"
       aria-pressed={on}
       onClick={() => onChange(!on)}
-      className={cn(BUTTON, 'self-start', on && 'border-warn')}
+      className={cn(BUTTON, 'self-start', on && 'border-warn!')}
     >
       <Eye aria-hidden="true" className="size-4" />
       Eve’s view
@@ -185,35 +185,39 @@ export function DhModule({ walkthrough }: { walkthrough?: ReactNode }) {
       citations={DH_PAGE_CITATIONS}
       title={DH_META.title}
       intro={DH_META.intro}
+      slug={DH_META.slug}
+      step={view.index}
+      share={share}
       mode={mode}
       onModeChange={setModeChoice}
+      chapters={
+        <ChapterTabs
+          chapters={DH_CHAPTER_LIST}
+          current={scene}
+          onSelect={selectScene}
+          done={
+            progress.completed.includes(DH_META.slug)
+              ? DH_CHAPTER_LIST.map((c) => c.id)
+              : []
+          }
+        />
+      }
+      lesson={
+        <ChapterContext.Provider value={scene}>{walkthrough}</ChapterContext.Provider>
+      }
       controls={
-        <>
-          <ChapterTabs
-            chapters={DH_CHAPTER_LIST}
-            current={scene}
-            onSelect={selectScene}
-            done={
-              progress.completed.includes(DH_META.slug)
-                ? DH_CHAPTER_LIST.map((c) => c.id)
-                : []
-            }
+        mode === 'free' && runs ? (
+          <runs.FreePlayInputs
+            key={`${String(share.ready)}-${scene}`}
+            scene={scene}
+            input={state.input}
+            seed={state.seed}
+            problem={problem}
+            shareable={share.shareable}
+            onChange={setInput}
+            onSeed={setSeed}
           />
-          {mode === 'walkthrough' ? (
-            <ChapterContext.Provider value={scene}>{walkthrough}</ChapterContext.Provider>
-          ) : runs ? (
-            <runs.FreePlayInputs
-              key={`${String(share.ready)}-${scene}`}
-              scene={scene}
-              input={state.input}
-              seed={state.seed}
-              problem={problem}
-              shareable={share.shareable}
-              onChange={setInput}
-              onSeed={setSeed}
-            />
-          ) : null}
-        </>
+        ) : null
       }
       inspector={
         <>

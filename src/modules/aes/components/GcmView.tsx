@@ -31,10 +31,8 @@ export const GcmView = memo(function GcmView({ event }: { event: AesGcmEvent }) 
               key={part.stage}
               aria-current={part.stage === event.stage ? 'step' : undefined}
               className={cn(
-                'rounded-md border px-3 py-2 text-sm',
-                current
-                  ? 'border-accent bg-surface border-2'
-                  : 'border-border bg-surface',
+                'bg-surface rounded-md px-3 py-2 text-sm',
+                current ? 'border-accent border-2' : 'border-border border',
               )}
             >
               <span className="block font-semibold">{part.title}</span>

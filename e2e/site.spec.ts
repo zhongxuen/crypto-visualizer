@@ -156,17 +156,10 @@ test.describe('invalid links fall back to the module’s start', () => {
 
         await page.goto(`${route.path}?s=${s}`);
         await expect(page.getByRole('status')).toContainText('Step 1 of');
-        // The page rewrites the link to its own defaults (after a short debounce), never
-        // keeps the bad one. Several bad links already carry this module's `m`, so wait
-        // for the whole envelope.
-        await expect
-          .poll(async () => {
-            const state = await linkedState(page).catch(() => null);
-            return state && { m: state.m, v: state.v, step: state.step };
-          })
-          .toEqual({ m: route.slug, v: 1, step: 0 });
-        // No password-like key survives (keys only: the module slug is "passwords").
-        expect(JSON.stringify(await linkedState(page))).not.toMatch(/"[^"]*passw[^"]*":/i);
+        // The page falls back to its defaults and, since a link at the defaults is the
+        // bare page (UIUX P9), drops the bad `?s=` after a short debounce: it never keeps
+        // the bad one, password-like keys included.
+        await expect.poll(() => new URL(page.url()).searchParams.has('s')).toBe(false);
         expect(errors).toEqual([]);
       });
     }

@@ -4,10 +4,10 @@ import { expect, test, type Page } from '@playwright/test';
 /** Paint: three pots, two mixes, two sends, two final mixes, shared, Eve, the limit. */
 const PAINT_STEPS = 12;
 
-/** The share link is written only after hydration, so it marks "keys will work". */
+/** The page marks itself once the share state is read (after hydration): keys work then. */
 async function open(page: Page, url = '/dh') {
   await page.goto(url);
-  await expect(page).toHaveURL(/\?s=/);
+  await expect(page.locator('[data-share-ready="true"]')).toHaveCount(1);
 }
 
 async function linkHasStep(page: Page, step: number) {

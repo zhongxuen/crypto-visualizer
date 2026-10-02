@@ -47,10 +47,10 @@ function Registers({ before, after }: { before: number[]; after: number[] }) {
               <span
                 key={i}
                 className={cn(
-                  'flex flex-col items-center rounded border px-1.5 py-0.5 font-mono text-xs',
+                  'flex flex-col items-center rounded px-1.5 py-0.5 font-mono text-xs',
                   changed
                     ? 'border-diff-on pattern-changed border-2'
-                    : 'border-border bg-surface',
+                    : 'border-border bg-surface border',
                 )}
               >
                 <span className="text-fg-muted">{WORKING_NAMES[i]}</span>

@@ -26,14 +26,17 @@ export function CitationLink({ id, className }: { id: CitationId; className?: st
       target="_blank"
       rel="noreferrer"
       className={cn(
-        'text-accent focus-visible:outline-focus inline-flex items-center gap-1 rounded-sm text-sm underline underline-offset-2 focus-visible:outline-2',
+        'border-border bg-surface-overlay hover:border-border-strong focus-visible:outline-focus inline-flex max-w-full items-baseline gap-1.5 rounded-md border px-2 py-1 text-xs leading-snug focus-visible:outline-2',
         className,
       )}
     >
-      <span>
-        {where}: {citation.title}
-      </span>
-      <ExternalLink aria-hidden="true" className="size-3.5 shrink-0" />
+      <span className="text-accent shrink-0 font-mono font-medium">{where}</span>
+      <span className="sr-only">:</span>{' '}
+      <span className="text-fg-secondary min-w-0">{citation.title}</span>{' '}
+      <ExternalLink
+        aria-hidden="true"
+        className="text-fg-muted size-3 shrink-0 self-center"
+      />
       <span className="sr-only">(opens in a new tab)</span>
     </a>
   );

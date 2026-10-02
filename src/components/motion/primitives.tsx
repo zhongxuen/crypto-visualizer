@@ -31,44 +31,12 @@ import { useStepTransition } from './useStepTransition';
  * whether to run it and restart it.
  */
 
-type Trigger = string | number | boolean | null | undefined;
+import type { Trigger } from './reveal';
 
-const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+export { Reveal } from './reveal';
 
-/**
- * Fade in and rise 4 px whenever `trigger` changes (the offset flips when stepping back).
- * `index` staggers siblings by `--stagger`.
- */
-export function Reveal({
-  trigger,
-  index = 0,
-  className,
-  children,
-}: {
-  trigger: Trigger;
-  index?: number;
-  className?: string;
-  children: ReactNode;
-}) {
-  const { animate, motion, direction } = useStepTransition();
-  const style = {
-    '--i': index,
-    '--reveal-dir': direction === 'back' ? -1 : 1,
-  } as CSSProperties;
-  return (
-    <span
-      key={String(trigger)}
-      style={style}
-      className={cn(
-        'block',
-        animate ? 'motion-reveal' : motion ? 'motion-fade' : undefined,
-        className,
-      )}
-    >
-      {children}
-    </span>
-  );
-}
+const useIsomorphicLayoutEffect =
+  typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 /** A one-shot highlighter swipe on something that just changed. */
 export function Pulse({
@@ -88,7 +56,11 @@ export function Pulse({
     <span
       key={active && animate ? String(trigger) : 'still'}
       data-pulse={active && animate ? '' : undefined}
-      className={cn('inline-block rounded-cell', active && animate && 'motion-pulse', className)}
+      className={cn(
+        'rounded-cell inline-block',
+        active && animate && 'motion-pulse',
+        className,
+      )}
     >
       {children}
     </span>
@@ -260,9 +232,7 @@ export function Morph({
         ? [...text].map((char, i) => (
             <span
               key={`${i}:${char}:${to}`}
-              className={
-                char !== before[i] ? 'motion-flip-card inline-block' : undefined
-              }
+              className={char !== before[i] ? 'motion-flip-card inline-block' : undefined}
             >
               {char}
             </span>

@@ -2,6 +2,7 @@
 
 import { memo } from 'react';
 
+import { Reveal } from '@/components/motion/reveal';
 import { cn } from '@/lib/cn';
 
 /**
@@ -10,7 +11,9 @@ import { cn } from '@/lib/cn';
  * ADAPTED from Internet Visualizer `src/components/viz/StepCaption.tsx` at 59ae4ad (see
  * VENDORED.md). Kept: exactly one polite `role="status"` per view, handed only discrete
  * values so it changes only when the step turns over. Dropped: the stage-moment logic
- * and glossary links.
+ * and glossary links. Added (UIUX §4.2): "Step 3 of 8 · Phase" as an eyebrow over a
+ * larger headline that rises in on each step (`Reveal`; from below going forward, from
+ * above going back, still under reduced motion).
  */
 
 export interface StepCaptionProps {
@@ -33,12 +36,16 @@ export const StepCaption = memo(function StepCaption({
     <div role="status" className={cn('leading-snug text-pretty', className)}>
       {index >= 0 ? (
         <>
-          <span className="text-accent block text-xs font-semibold tracking-wide">
-            Step {index + 1} of {count}
+          <span className="text-fg-muted block text-xs font-semibold tracking-wide">
+            <span className="font-mono text-(--tint,var(--accent))">
+              Step {index + 1} of {count}
+            </span>
             {group ? ` · ${group}` : ''}
             <span className="sr-only">: </span>
           </span>
-          <span className="block font-medium">{label}</span>
+          <Reveal trigger={index} className="text-lg font-medium md:text-xl">
+            {label}
+          </Reveal>
         </>
       ) : (
         <span className="text-fg-muted">Nothing to show yet.</span>

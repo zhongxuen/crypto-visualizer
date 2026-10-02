@@ -1,6 +1,12 @@
 'use client';
 
-import { createContext, createElement, useContext, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  createElement,
+  useContext,
+  useState,
+  type ReactNode,
+} from 'react';
 
 import { useReducedMotion } from '../timeline/useMediaQuery';
 

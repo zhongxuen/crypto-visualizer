@@ -109,36 +109,36 @@ export function HashingModule({ walkthrough }: { walkthrough?: ReactNode }) {
       citations={runs?.HASHING_PAGE_CITATIONS ?? HASHING_SHA256_CITATIONS}
       title={HASHING_META.title}
       intro={HASHING_META.intro}
+      slug={HASHING_META.slug}
+      step={view.index}
+      share={share}
       mode={mode}
       onModeChange={setModeChoice}
+      chapters={
+        <ChapterTabs
+          chapters={HASHING_CHAPTER_LIST}
+          current={chapter}
+          onSelect={selectChapter}
+          done={
+            progress.completed.includes(HASHING_META.slug)
+              ? HASHING_CHAPTER_LIST.map((c) => c.id)
+              : []
+          }
+        />
+      }
+      tools={<HexBinToggle value={format} onChange={setFormat} />}
+      lesson={
+        <ChapterContext.Provider value={chapter}>{walkthrough}</ChapterContext.Provider>
+      }
       controls={
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <ChapterTabs
-              chapters={HASHING_CHAPTER_LIST}
-              current={chapter}
-              onSelect={selectChapter}
-              done={
-                progress.completed.includes(HASHING_META.slug)
-                  ? HASHING_CHAPTER_LIST.map((c) => c.id)
-                  : []
-              }
-            />
-            <HexBinToggle value={format} onChange={setFormat} />
-          </div>
-          {mode === 'walkthrough' ? (
-            <ChapterContext.Provider value={chapter}>
-              {walkthrough}
-            </ChapterContext.Provider>
-          ) : runs ? (
-            <runs.FreePlayInputs
-              chapter={chapter}
-              input={state.input}
-              onChange={setInput}
-              shareable={share.shareable}
-            />
-          ) : null}
-        </>
+        mode === 'free' && runs ? (
+          <runs.FreePlayInputs
+            chapter={chapter}
+            input={state.input}
+            onChange={setInput}
+            shareable={share.shareable}
+          />
+        ) : null
       }
       inspector={
         <>

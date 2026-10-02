@@ -87,43 +87,43 @@ export function XorModule({ walkthrough }: { walkthrough?: ReactNode }) {
       citations={XOR_PAGE_CITATIONS}
       title={XOR_META.title}
       intro={XOR_META.intro}
+      slug={XOR_META.slug}
+      step={view.index}
+      share={share}
       mode={mode}
       onModeChange={setModeChoice}
+      chapters={
+        <ChapterTabs
+          chapters={XOR_CHAPTER_LIST}
+          current={chapter}
+          onSelect={selectChapter}
+          done={
+            progress.completed.includes(XOR_META.slug)
+              ? XOR_CHAPTER_LIST.map((c) => c.id)
+              : []
+          }
+        />
+      }
+      tools={<HexBinToggle value={format} onChange={setFormat} />}
+      lesson={
+        <ChapterContext.Provider value={chapter}>{walkthrough}</ChapterContext.Provider>
+      }
       controls={
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <ChapterTabs
-              chapters={XOR_CHAPTER_LIST}
-              current={chapter}
-              onSelect={selectChapter}
-              done={
-                progress.completed.includes(XOR_META.slug)
-                  ? XOR_CHAPTER_LIST.map((c) => c.id)
-                  : []
-              }
-            />
-            <HexBinToggle value={format} onChange={setFormat} />
-          </div>
-          {mode === 'walkthrough' ? (
-            <ChapterContext.Provider value={chapter}>
-              {walkthrough}
-            </ChapterContext.Provider>
-          ) : (
-            <FreePlayInputs
-              chapter={chapter}
-              input={state.input}
-              onChange={setInput}
-              onNewKey={() =>
-                setState((current) => ({
-                  ...current,
-                  step: 0,
-                  seed: (current.seed + 1) >>> 0,
-                }))
-              }
-              shareable={share.shareable}
-            />
-          )}
-        </>
+        mode === 'free' ? (
+          <FreePlayInputs
+            chapter={chapter}
+            input={state.input}
+            onChange={setInput}
+            onNewKey={() =>
+              setState((current) => ({
+                ...current,
+                step: 0,
+                seed: (current.seed + 1) >>> 0,
+              }))
+            }
+            shareable={share.shareable}
+          />
+        ) : null
       }
       inspector={
         <>

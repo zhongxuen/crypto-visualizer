@@ -192,11 +192,11 @@ function ShiftRowsView({
         <span
           key={c}
           className={cn(
-            'rounded border px-1 py-0.5 text-center font-mono text-sm tabular-nums',
+            'rounded px-1 py-0.5 text-center font-mono text-sm tabular-nums',
             format === 'hex' ? 'min-w-8' : 'min-w-[5.5rem]',
             mark && changed.has(index)
               ? 'border-diff-on pattern-changed border-2'
-              : 'border-border bg-surface',
+              : 'border-border bg-surface border',
           )}
         >
           {formatByte(bytes[index], format)}

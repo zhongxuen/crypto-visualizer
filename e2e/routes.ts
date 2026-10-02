@@ -28,10 +28,10 @@ export const PAGE_ROUTES: readonly { name: string; path: string }[] = [
 /** A path nothing serves, for the 404 page. */
 export const NOT_FOUND_PATH = '/no-such-page';
 
-/** The share link is written only after hydration, so it marks "keys will work". */
+/** The page marks itself once the share state is read (after hydration): keys work then. */
 export async function openModule(page: Page, url: string) {
   await page.goto(url);
-  await expect(page).toHaveURL(/\?s=/);
+  await expect(page.locator('[data-share-ready="true"]')).toHaveCount(1);
 }
 
 /** Decode the page's `?s=` state, or `null`. */

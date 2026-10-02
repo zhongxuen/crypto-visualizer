@@ -45,7 +45,10 @@ export const SboxTable = memo(function SboxTable({
               <th
                 key={c}
                 scope="col"
-                className={cn('text-fg-muted px-1', c === col && 'text-accent font-bold')}
+                className={cn(
+                  'px-1',
+                  c === col ? 'text-accent font-bold' : 'text-fg-muted',
+                )}
               >
                 {c.toString(16)}
               </th>
@@ -57,7 +60,10 @@ export const SboxTable = memo(function SboxTable({
             <tr key={r}>
               <th
                 scope="row"
-                className={cn('text-fg-muted px-1', r === row && 'text-accent font-bold')}
+                className={cn(
+                  'px-1',
+                  r === row ? 'text-accent font-bold' : 'text-fg-muted',
+                )}
               >
                 {r.toString(16)}
               </th>

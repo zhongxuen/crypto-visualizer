@@ -157,4 +157,40 @@ describe('useShareState', () => {
     expect(shareStateFromSearch(DEF, window.location.search).step).toBe(2);
     expect(window.history.length).toBe(lengthBefore);
   });
+
+  it('keeps the URL clean at the defaults, and cleans a link back to them (P9)', async () => {
+    window.history.replaceState(null, '', '/demo?s=garbage!!');
+    render(<Probe />);
+    await loaded();
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(window.location.search).toBe('');
+  });
+
+  it('writes and returns the link to the current step', async () => {
+    let link: (() => string | null) | null = null;
+    function Linker() {
+      const share = useShareState(LAZY);
+      link = share.link;
+      return (
+        <button
+          type="button"
+          onClick={() => share.setState((s) => ({ ...s, step: s.step + 3 }))}
+        >
+          step
+        </button>
+      );
+    }
+    render(<Linker />);
+    expect(link!()).toBeNull();
+    await loaded();
+    // At the defaults the link is the bare page.
+    expect(link!()).toBe(`${window.location.origin}/demo`);
+    fireEvent.click(screen.getByRole('button'));
+    const href = link!();
+    expect(shareStateFromSearch(DEF, new URL(href!).search).step).toBe(3);
+    // Written to the address bar at once, without waiting for the debounce.
+    expect(window.location.href).toBe(href);
+  });
 });

@@ -15,12 +15,12 @@ const TITLES: Record<LaneId, string> = {
 };
 
 const TONE_CLASS: Record<BoardItem['tone'], string> = {
-  private: 'border-dashed border-border-strong',
-  public: 'border-border',
-  share: 'border-border',
+  private: 'border border-dashed border-border-strong',
+  public: 'border border-border',
+  share: 'border border-border',
   secret: 'border-accent border-2',
   fake: 'border-warn border-2',
-  check: 'border-ok',
+  check: 'border border-ok',
 };
 
 /** Private values and secrets are what an eavesdropper doesn't get. */
@@ -45,9 +45,9 @@ function Item({
     <li
       aria-current={current ? 'step' : undefined}
       className={cn(
-        'bg-surface flex min-w-0 items-center gap-2 rounded-md border px-2 py-1.5 text-sm',
+        'flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-sm',
         TONE_CLASS[item.tone],
-        current && 'bg-highlight',
+        current ? 'bg-highlight' : 'bg-surface',
       )}
     >
       {item.colour && !hidden ? <Swatch colour={item.colour} /> : null}
@@ -108,8 +108,8 @@ export function Lanes({
             key={lane}
             data-lane={lane}
             className={cn(
-              'flex min-w-0 flex-col gap-2 rounded-lg border p-2',
-              watched ? 'border-warn border-2' : 'border-border',
+              'flex min-w-0 flex-col gap-2 rounded-lg p-2',
+              watched ? 'border-warn border-2' : 'border-border border',
               lane === 'public' || lane.startsWith('mallory')
                 ? 'bg-surface-overlay'
                 : 'bg-bg',

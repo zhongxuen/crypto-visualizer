@@ -96,6 +96,17 @@ Other fixed rules:
   file with what the first chapter needs (`sha256/run.ts` and `sha256/avalanche.ts` apart
   from the fast path in `sha256.ts`; `aes/keyScheduleRun.ts` and `aes/avalanche.ts` apart
   from `aes128.ts`). Stepped and fast paths still go through one shared loop.
+- `cn` (`src/lib/cn.ts`) is a plain class join, with no tailwind-merge (8.4 KB on every
+  route). Never pass it two classes for one property under one variant (`border` with
+  `border-2`, `bg-surface` with `bg-highlight`): pick one per branch, or use the
+  important suffix (`border-warn!`) to beat a shared base like `BUTTON`. The UI tests
+  check every rendered call against tailwind-merge (`tests/setup.ts`) and fail on one.
+- Module pages fill `ModuleLayout`'s slots: `chapters` (tabs, in the header), `tools`
+  (the "More options" menu), `lesson` (the rail's prose, kept in free play), `controls`
+  (free play's inputs, above the visual), `inspector`, `timeline`, plus `slug`, `step`
+  (for the motion primitives in `src/components/motion`) and `share` (the dock's "Copy
+  link", and the `data-share-ready` marker e2e waits for). A link at the defaults is the
+  bare page: `?s=` appears only once the state differs.
 - `CitationLink` reads the page's registry from context. Each module passes its own
   (`src/modules/<name>/citations.ts`) to `ModuleLayout`'s `citations` prop;
   `tests/module-citations.test.ts` checks it covers everything the module's runs cite. A

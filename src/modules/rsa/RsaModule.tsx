@@ -158,37 +158,39 @@ export function RsaModule({ walkthrough }: { walkthrough?: ReactNode }) {
       citations={runs?.RSA_PAGE_CITATIONS ?? RSA_KEYS_CITATIONS}
       title={RSA_META.title}
       intro={RSA_META.intro}
+      slug={RSA_META.slug}
+      step={view.index}
+      share={share}
       mode={mode}
       onModeChange={setModeChoice}
+      chapters={
+        <ChapterTabs
+          chapters={RSA_CHAPTER_LIST}
+          current={chapter}
+          onSelect={selectChapter}
+          done={
+            progress.completed.includes(RSA_META.slug)
+              ? RSA_CHAPTER_LIST.map((c) => c.id)
+              : []
+          }
+        />
+      }
+      lesson={
+        <ChapterContext.Provider value={chapter}>{walkthrough}</ChapterContext.Provider>
+      }
       controls={
-        <>
-          <ChapterTabs
-            chapters={RSA_CHAPTER_LIST}
-            current={chapter}
-            onSelect={selectChapter}
-            done={
-              progress.completed.includes(RSA_META.slug)
-                ? RSA_CHAPTER_LIST.map((c) => c.id)
-                : []
-            }
+        mode === 'free' && runs ? (
+          <runs.FreePlayInputs
+            key={`${String(share.ready)}-${state.input.mode}`}
+            chapter={chapter}
+            input={state.input}
+            seed={state.seed}
+            problem={problem}
+            shareable={share.shareable}
+            onChange={setInput}
+            onSeed={setSeed}
           />
-          {mode === 'walkthrough' ? (
-            <ChapterContext.Provider value={chapter}>
-              {walkthrough}
-            </ChapterContext.Provider>
-          ) : runs ? (
-            <runs.FreePlayInputs
-              key={`${String(share.ready)}-${state.input.mode}`}
-              chapter={chapter}
-              input={state.input}
-              seed={state.seed}
-              problem={problem}
-              shareable={share.shareable}
-              onChange={setInput}
-              onSeed={setSeed}
-            />
-          ) : null}
-        </>
+        ) : null
       }
       inspector={
         <>

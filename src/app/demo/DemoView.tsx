@@ -11,7 +11,6 @@ import {
   useByteFormat,
 } from '@/components/blocks';
 import { StepInspector } from '@/components/inspector';
-import { StepTransitionProvider } from '@/components/motion';
 import { ModuleLayout, type ModuleMode } from '@/components/shell';
 import { CITATIONS } from '@/core/citations';
 import {
@@ -47,7 +46,8 @@ export function DemoView() {
       intro="Every shared component, driven by a fake run. Keyboard only works end to end."
       mode={mode}
       onModeChange={setMode}
-      controls={<HexBinToggle value={format} onChange={setFormat} />}
+      tools={<HexBinToggle value={format} onChange={setFormat} />}
+      step={Math.max(0, index)}
       inspector={
         <>
           <StepInspector event={event} />
@@ -99,9 +99,7 @@ export function DemoView() {
         rows={result.events.map((e) => e.row)}
         currentRow={index}
       />
-      <StepTransitionProvider step={Math.max(0, index)}>
-        <MotionDemo event={event} index={Math.max(0, index)} />
-      </StepTransitionProvider>
+      <MotionDemo event={event} index={Math.max(0, index)} />
     </ModuleLayout>
   );
 }

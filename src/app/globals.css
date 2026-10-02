@@ -190,6 +190,16 @@ body,
 .motion-move {
   animation: cv-move var(--dur-step) var(--ease-out) both;
 }
+/* A tick that draws itself (a chapter or phase just finished). */
+@keyframes cv-draw {
+  from {
+    stroke-dashoffset: 24;
+  }
+}
+.tick-draw path {
+  stroke-dasharray: 24;
+  animation: cv-draw var(--dur-step) var(--ease-out) both;
+}
 .motion-wave > * {
   animation: cv-wave var(--dur-quick) var(--ease-out) both;
   animation-delay: calc(var(--i, 0) * var(--wave-stagger, 8ms));

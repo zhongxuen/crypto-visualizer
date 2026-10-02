@@ -165,12 +165,13 @@ export const ByteGrid = memo(function ByteGrid({
                 data-changed={isChanged || undefined}
                 data-highlighted={isHighlighted || undefined}
                 className={cn(
-                  'focus-visible:outline-focus flex shrink-0 flex-col items-center rounded border px-1 py-0.5 font-mono text-sm tabular-nums focus-visible:outline-2 focus-visible:outline-offset-1',
+                  'focus-visible:outline-focus flex shrink-0 flex-col items-center rounded px-1 py-0.5 font-mono text-sm tabular-nums focus-visible:outline-2 focus-visible:outline-offset-1',
                   format === 'hex' ? 'min-w-8' : 'min-w-[5.5rem]',
                   isChanged
                     ? 'border-diff-on pattern-changed border-2'
-                    : 'border-border bg-surface',
-                  isHighlighted && 'ring-accent bg-highlight ring-2',
+                    : 'border-border border',
+                  isHighlighted && 'ring-accent ring-2',
+                  isHighlighted ? 'bg-highlight' : !isChanged && 'bg-surface',
                 )}
               >
                 <span aria-hidden="true">{text}</span>

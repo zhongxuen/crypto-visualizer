@@ -86,7 +86,7 @@ test('the PBKDF2 Worker runs under the policy', async ({ page }) => {
   page.on('worker', (worker) => workers.push(worker.url()));
 
   await page.goto('/passwords');
-  await expect(page).toHaveURL(/\?s=/);
+  await expect(page.locator('[data-share-ready="true"]')).toHaveCount(1);
   await page
     .getByRole('navigation', { name: 'Chapters' })
     .getByRole('button', { name: 'PBKDF2' })

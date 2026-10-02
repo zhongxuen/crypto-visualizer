@@ -64,8 +64,8 @@ export function MalleabilityStrip({
             aria-current={active ? 'step' : undefined}
             aria-labelledby={`rsa-actor-${actor.id}`}
             className={cn(
-              'bg-surface flex min-w-0 flex-col gap-2 rounded-lg border p-3',
-              active ? 'border-accent border-2' : 'border-border',
+              'bg-surface flex min-w-0 flex-col gap-2 rounded-lg p-3',
+              active ? 'border-accent border-2' : 'border-border border',
             )}
           >
             <h2 id={`rsa-actor-${actor.id}`} className="font-semibold">

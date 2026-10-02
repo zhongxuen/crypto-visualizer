@@ -1,15 +1,18 @@
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createRun, STEP_MS } from '@/core/events/builder';
 import type { EventBase } from '@/core/events/types';
 import { timelineFrom } from '@/core/sim/playback';
 
+import { ChapterTabs } from '../lesson/Chapters';
+import { ShareLinkContext } from '../state/ShareLinkContext';
 import { expectNoAxeViolations } from '../testing/axe';
+import { CopyLinkButton, ShortcutSheet } from './DockExtras';
 import { matchPlaybackKey, shouldIgnoreKey } from './keymap';
-import { PhaseStepper } from './PhaseStepper';
+import { groupPhases, PhaseStepper } from './PhaseStepper';
 import { StepCaption } from './StepCaption';
-import { TimelineBar } from './TimelineBar';
+import { timeLeft, TimelineBar } from './TimelineBar';
 import { createPlaybackStore, usePlayback, useStepIndex } from './usePlayback';
 import { usePlaybackKeys } from './usePlaybackKeys';
 
@@ -101,8 +104,24 @@ describe('playback store', () => {
       { initialProps: { result: first, initialStep: 2 } },
     );
     expect(hook.current.index).toBe(2);
-    rerender({ result: sample(), initialStep: 0 });
+    rerender({ result: blocks(), initialStep: 0 });
     expect(hook.current.index).toBe(0);
+  });
+
+  it('keeps the playhead when an identical run is rebuilt', () => {
+    // A module rebuilds its run when later chapters' code arrives; a share link's step
+    // that has already landed must survive it.
+    const { result: hook, rerender } = renderHook(
+      ({ result }) => {
+        const store = usePlayback({ result, initialStep: 2 });
+        return { store, index: useStepIndex(store, result) };
+      },
+      { initialProps: { result: sample() } },
+    );
+    expect(hook.current.index).toBe(2);
+    act(() => hook.current.store.getState().seekStep(3));
+    rerender({ result: sample() });
+    expect(hook.current.index).toBe(3);
   });
 });
 
@@ -217,6 +236,189 @@ describe('PhaseStepper', () => {
     const { container } = render(
       <PhaseStepper phases={sample().phases} currentIndex={0} onSeek={() => {}} />,
     );
+    await expectNoAxeViolations(container);
+  });
+});
+
+/** Phases named the way SHA-256 names its long runs. */
+function blocks() {
+  const run = createRun<E>();
+  const step = (id: string) =>
+    run.step({ kind: 't', id, label: id, citation: 'rfc3629.3' });
+  run.group('Padding', () => step('p'));
+  for (const part of ['Schedule', 'Rounds 1–32', 'Rounds 33–64', 'Add']) {
+    run.group(`Block 1 · ${part}`, () => step(part));
+  }
+  run.group('Digest', () => step('d'));
+  return run.finish();
+}
+
+describe('PhaseStepper on a long run (B10)', () => {
+  it('groups phases under a shared prefix', () => {
+    const groups = groupPhases(blocks().phases);
+    expect(groups.map((g) => [g.name, g.phases.length])).toEqual([
+      [null, 1],
+      ['Block 1', 4],
+      [null, 1],
+    ]);
+  });
+
+  it('leaves a short run of a prefix ungrouped', () => {
+    const run = createRun<E>();
+    const step = (id: string) =>
+      run.step({ kind: 't', id, label: id, citation: 'rfc3629.3' });
+    run.group('X · a', () => step('a'));
+    run.group('X · b', () => step('b'));
+    expect(groupPhases(run.finish().phases).every((g) => g.name === null)).toBe(true);
+  });
+
+  it('opens only the group holding the current phase, with ticks for finished ones', () => {
+    const { phases } = blocks();
+    const { rerender } = render(
+      <PhaseStepper phases={phases} currentIndex={0} onSeek={() => {}} />,
+    );
+    expect(
+      screen.getByRole('button', { name: /Block 1 · 4 phases/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Schedule/ })).not.toBeInTheDocument();
+
+    rerender(<PhaseStepper phases={phases} currentIndex={2} onSeek={() => {}} />);
+    expect(screen.getByText('Block 1')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Rounds 1–32/ })).toHaveAttribute(
+      'aria-current',
+      'step',
+    );
+    expect(screen.getByRole('button', { name: /Schedule/ })).toHaveTextContent(
+      'Finished',
+    );
+
+    rerender(<PhaseStepper phases={phases} currentIndex={5} onSeek={() => {}} />);
+    expect(screen.getByRole('button', { name: /Block 1 · 4 phases/ })).toHaveTextContent(
+      'Finished',
+    );
+  });
+
+  it('keeps the current phase in view inside its own scroll box', () => {
+    const { phases } = blocks();
+    const ui = (current: number) => (
+      <div style={{ overflowY: 'auto' }} data-testid="box">
+        <PhaseStepper phases={phases} currentIndex={current} onSeek={() => {}} />
+      </div>
+    );
+    const { rerender } = render(ui(0));
+    const box = screen.getByTestId('box');
+    Object.defineProperty(box, 'scrollHeight', { value: 500 });
+    Object.defineProperty(box, 'clientHeight', { value: 100 });
+    const rect = vi
+      .spyOn(Element.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: Element) {
+        const top = this.getAttribute('aria-current') === 'step' ? 300 : 0;
+        return { top, left: 0, right: 0, bottom: top, width: 0, height: 0 } as DOMRect;
+      });
+    rerender(ui(5));
+    expect(box.scrollTop).toBeGreaterThan(0);
+    rect.mockRestore();
+  });
+});
+
+describe('The dock (UIUX §4.2)', () => {
+  it('prints the time left at the current speed', () => {
+    expect(timeLeft(1, 1)).toBeUndefined();
+    const many = Math.ceil(120_000 / STEP_MS);
+    expect(timeLeft(many, 1)).toBe('about 2 min left');
+    expect(timeLeft(many, 4)).toBe('about 30 s left');
+  });
+
+  it('opens the shortcut sheet from its button and from the ? key', () => {
+    render(<ShortcutSheet />);
+    const dialog = document.querySelector('dialog')!;
+    expect(dialog.open).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Keyboard shortcuts' }));
+    expect(dialog.open).toBe(true);
+    expect(screen.getByText('Play or pause')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(dialog.open).toBe(false);
+    act(() => {
+      fireEvent.keyDown(window, { key: '?' });
+    });
+    expect(dialog.open).toBe(true);
+  });
+
+  it('copies the link to this step', async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.assign(navigator, { clipboard: { writeText } });
+    const link = vi.fn(() => 'https://cv.example/xor?s=abc');
+    render(
+      <ShareLinkContext.Provider value={{ link }}>
+        <CopyLinkButton />
+      </ShareLinkContext.Provider>,
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy link to this step' }));
+    });
+    expect(writeText).toHaveBeenCalledWith('https://cv.example/xor?s=abc');
+    expect(screen.getByText('Link copied.')).toBeInTheDocument();
+  });
+
+  it('says so when the state is too large for a link', () => {
+    render(
+      <ShareLinkContext.Provider value={{ link: () => null }}>
+        <CopyLinkButton />
+      </ShareLinkContext.Provider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link to this step' }));
+    expect(screen.getByText('This state is too large for a link.')).toBeInTheDocument();
+  });
+
+  it('has no link button on a page without share state', () => {
+    const { container } = render(<CopyLinkButton />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('opens "More playback options" (phones) with Skip this phase', () => {
+    const RESULT = sample();
+    function Bar() {
+      const store = usePlayback({ result: RESULT });
+      const index = useStepIndex(store, RESULT);
+      return (
+        <>
+          <StepCaption index={index} count={4} label={RESULT.events[index].label} />
+          <TimelineBar store={store} result={RESULT} />
+        </>
+      );
+    }
+    render(<Bar />);
+    const more = screen.getByRole('button', { name: 'More playback options' });
+    fireEvent.click(more);
+    expect(more).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Skip this phase' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Third');
+    expect(more).toHaveAttribute('aria-expanded', 'false');
+  });
+});
+
+describe('ChapterTabs', () => {
+  it('marks the current chapter and ticks finished ones', async () => {
+    const chapters = [
+      { id: 'a', title: 'Alpha' },
+      { id: 'b', title: 'Beta' },
+    ] as const;
+    let picked = '';
+    const { container } = render(
+      <ChapterTabs
+        chapters={chapters}
+        current="b"
+        done={['a']}
+        onSelect={(id) => (picked = id)}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /Beta/ })).toHaveAttribute(
+      'aria-current',
+      'step',
+    );
+    expect(screen.getByRole('button', { name: /Alpha/ })).toHaveTextContent('(done)');
+    fireEvent.click(screen.getByRole('button', { name: /Alpha/ }));
+    expect(picked).toBe('a');
     await expectNoAxeViolations(container);
   });
 });

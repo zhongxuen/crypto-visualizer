@@ -25,8 +25,8 @@ export function Value({
       <p
         data-testid={testId}
         className={cn(
-          'bg-surface rounded-md border px-3 py-2 font-mono text-sm break-all',
-          emphasis ? 'border-accent border-2' : 'border-border',
+          'bg-surface rounded-md px-3 py-2 font-mono text-sm break-all',
+          emphasis ? 'border-accent border-2' : 'border-border border',
         )}
       >
         {value}
@@ -41,8 +41,9 @@ export function Swatch({ colour, className }: { colour: string; className?: stri
     <span
       aria-hidden="true"
       className={cn(
-        'border-border-strong inline-block size-8 shrink-0 rounded-t-sm rounded-b-xl border-2',
-        className,
+        'border-border-strong inline-block shrink-0 rounded-t-sm rounded-b-xl border-2',
+        // The size, unless the caller gives its own.
+        className ?? 'size-8',
       )}
       style={{ backgroundColor: colour }}
     />

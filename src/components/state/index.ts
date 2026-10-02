@@ -16,3 +16,4 @@ export {
 } from './useProgress';
 export { useDeferredImport } from './useDeferredImport';
 export { useShareState, type UseShareState } from './useShareState';
+export { ShareLinkContext, useShareLink, type ShareLink } from './ShareLinkContext';

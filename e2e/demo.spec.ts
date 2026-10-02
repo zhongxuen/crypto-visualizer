@@ -4,6 +4,7 @@ import { expect, test } from '@playwright/test';
 test.describe('/demo building blocks', () => {
   test('is driven entirely by the keyboard', async ({ page }) => {
     await page.goto('/demo');
+    await expect(page.locator('[data-hydrated]')).toHaveCount(1);
     const status = page.getByRole('status');
     await expect(status).toContainText('Step 1 of 9');
 
@@ -30,6 +31,7 @@ test.describe('/demo building blocks', () => {
     test(`has no axe violations (${theme})`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: theme });
       await page.goto('/demo');
+      await expect(page.locator('[data-hydrated]')).toHaveCount(1);
       const results = await new AxeBuilder({ page }).analyze();
       expect(results.violations).toEqual([]);
     });
@@ -38,6 +40,7 @@ test.describe('/demo building blocks', () => {
   test('reduced motion does not autoplay or animate', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/demo');
+    await expect(page.locator('[data-hydrated]')).toHaveCount(1);
     const duration = await page
       .getByRole('button', { name: 'Play', exact: true })
       .evaluate((node) => getComputedStyle(node).transitionDuration);
@@ -56,6 +59,7 @@ test.describe('/demo motion primitives', () => {
 
   test('one step plays each primitive', async ({ page }) => {
     await page.goto('/demo');
+    await expect(page.locator('[data-hydrated]')).toHaveCount(1);
     await expect(page.getByRole('status')).toContainText('Step 1 of 9');
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowRight');
@@ -68,18 +72,20 @@ test.describe('/demo motion primitives', () => {
 
   test('a seek only crossfades, and lands on the end frame', async ({ page }) => {
     await page.goto('/demo');
+    await expect(page.locator('[data-hydrated]')).toHaveCount(1);
     await expect(page.getByRole('status')).toContainText('Step 1 of 9');
     await page.keyboard.press('End');
     await expect(page.getByRole('status')).toContainText('Step 9 of 9');
     expect(await animating(page)).toEqual(['reveal']);
-    await expect(
-      page.locator('[data-primitive="reveal"] .motion-fade'),
-    ).toHaveText('Done.');
+    await expect(page.locator('[data-primitive="reveal"] .motion-fade')).toHaveText(
+      'Done.',
+    );
   });
 
   test('reduced motion shows every end frame at once', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/demo');
+    await expect(page.locator('[data-hydrated]')).toHaveCount(1);
     await expect(page.getByRole('status')).toContainText('Step 1 of 9');
     await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('status')).toContainText('Step 2 of 9');

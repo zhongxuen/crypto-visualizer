@@ -6,13 +6,15 @@ import type { PhaseSummary } from '@/core/sim/result';
 import { cn } from '@/lib/cn';
 
 /**
- * The scrubber, over steps.
+ * The scrubber, over steps, with the run's phases drawn as labelled segments of the
+ * track (UIUX §4.2).
  *
  * ADAPTED from Internet Visualizer `src/components/viz/Timeline.tsx` at 59ae4ad (see
  * VENDORED.md). Upstream scrubs virtual milliseconds and puts a focusable marker on each
  * phase. A crypto run is read step by step and can have 130 groups (two SHA-256 blocks
- * of 64 rounds), so here the slider's value is the **step index**, and the group marks
- * are decorative ticks: the phase stepper is the keyboard way to a group.
+ * of 64 rounds), so here the slider's value is the **step index**, and the phase
+ * segments are decorative (their names show on hover): the phase stepper and Shift + an
+ * arrow are the keyboard way to a phase.
  *
  * A native `<input type="range">`: draggable, a real ARIA slider, and its arrows,
  * `Home` and `End` already do the right thing (`shouldIgnoreKey` leaves them to it).
@@ -24,16 +26,20 @@ export interface TimelineProps {
   /** Step on screen. */
   index: number;
   phases: readonly PhaseSummary[];
-  /** Virtual ms per step, to place the group ticks. */
+  /** Virtual ms per step, to place the phase segments. */
   stepMs: number;
   onSeekStep: (index: number) => void;
   /** What the current step is, for the slider's spoken value. */
   label?: string;
+  /** The current phase's name, printed under the track. */
+  phase?: string;
+  /** Printed after the step count, e.g. "about 2 min left". */
+  remaining?: string;
   className?: string;
 }
 
 const THUMB =
-  '[&::-webkit-slider-thumb]:size-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-surface [&::-webkit-slider-thumb]:bg-accent ' +
+  '[&::-webkit-slider-thumb]:size-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-surface [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:shadow ' +
   '[&::-moz-range-thumb]:size-4 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-surface [&::-moz-range-thumb]:bg-accent';
 
 export const Timeline = memo(function Timeline({
@@ -43,6 +49,8 @@ export const Timeline = memo(function Timeline({
   stepMs,
   onSeekStep,
   label,
+  phase,
+  remaining,
   className,
 }: TimelineProps) {
   const empty = count <= 0;
@@ -51,30 +59,47 @@ export const Timeline = memo(function Timeline({
   const valueText = empty
     ? 'No steps'
     : `Step ${index + 1} of ${count}${label ? `: ${label}` : ''}`;
+  /** Where a step sits along the track, as a percentage. */
+  const at = (step: number) => (last === 0 ? 0 : (step / last) * 100);
 
   return (
-    <div className={cn('flex flex-col gap-1', className)}>
+    <div className={cn('flex min-w-0 flex-col gap-0.5', className)}>
       <div className="relative flex h-5 items-center">
-        <div
-          aria-hidden="true"
-          className="bg-surface-overlay border-border absolute inset-x-0 h-1.5 rounded-full border"
-        />
+        {/* Phase segments: decorative; the phase stepper is the way to them. */}
+        <div aria-hidden="true" className="absolute inset-x-0 flex h-1.5">
+          {last > 0 && phases.length > 0 ? (
+            phases.map((p, i) => {
+              const start = Math.round(p.startMs / stepMs);
+              const end =
+                i + 1 < phases.length
+                  ? Math.round(phases[i + 1].startMs / stepMs)
+                  : last + 1;
+              const current = index >= start && index < end;
+              return (
+                <span
+                  key={p.id}
+                  title={p.title}
+                  className={cn(
+                    'absolute inset-y-0 rounded-full',
+                    current ? 'bg-border-strong' : 'bg-surface-overlay',
+                  )}
+                  style={{
+                    left: `${at(start)}%`,
+                    width: `calc(${Math.max(0, at(Math.min(end, last)) - at(start))}% - 2px)`,
+                    minWidth: '2px',
+                  }}
+                />
+              );
+            })
+          ) : (
+            <span className="bg-surface-overlay absolute inset-0 rounded-full" />
+          )}
+        </div>
         <div
           aria-hidden="true"
           style={{ transform: `scaleX(${fraction})`, transformOrigin: 'left center' }}
-          className="bg-accent absolute inset-x-0 h-1.5 rounded-full"
+          className="bg-accent absolute inset-x-0 h-1.5 rounded-full opacity-80 transition-transform duration-(--dur-quick) ease-(--ease-out)"
         />
-        {/* Group boundaries: decorative, the phase stepper is the way to them. */}
-        {last > 0
-          ? phases.map((phase) => (
-              <span
-                key={phase.id}
-                aria-hidden="true"
-                className="bg-border-strong absolute top-0 h-1.5 w-px"
-                style={{ left: `${(Math.round(phase.startMs / stepMs) / last) * 100}%` }}
-              />
-            ))
-          : null}
         <input
           type="range"
           min={0}
@@ -86,16 +111,18 @@ export const Timeline = memo(function Timeline({
           aria-label="Step"
           aria-valuetext={valueText}
           className={cn(
-            'relative w-full cursor-pointer appearance-none bg-transparent',
-            'focus-visible:outline-focus focus-visible:outline-2 focus-visible:outline-offset-4',
+            'relative h-11 w-full cursor-pointer appearance-none bg-transparent md:h-5',
+            'focus-visible:outline-focus focus-visible:outline-2 focus-visible:outline-offset-2',
             'disabled:cursor-not-allowed',
             THUMB,
           )}
         />
       </div>
-      <div className="text-fg-muted flex justify-between font-mono text-xs">
-        <span>
-          Step {empty ? 0 : index + 1} / {count}
+      <div className="text-fg-muted flex min-w-0 justify-between gap-2 text-xs">
+        <span className="truncate">{phase}</span>
+        <span className="shrink-0 font-mono">
+          {empty ? 0 : index + 1} / {count}
+          {remaining ? <span className="max-md:hidden"> · {remaining}</span> : null}
         </span>
       </div>
     </div>

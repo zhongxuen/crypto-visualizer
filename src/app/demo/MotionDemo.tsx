@@ -44,7 +44,7 @@ export function MotionDemo({ event, index }: { event: DemoEvent; index: number }
         <dd data-primitive="pulse" className="flex gap-1 font-mono">
           {row.map((byte, i) => (
             <Pulse key={i} trigger={index} active={byte !== event.previous[i]}>
-              <span className="border-border inline-block rounded-cell border px-1">
+              <span className="border-border rounded-cell inline-block border px-1">
                 {formatByte(byte, 'hex')}
               </span>
             </Pulse>
@@ -77,7 +77,7 @@ export function MotionDemo({ event, index }: { event: DemoEvent; index: number }
               <span
                 key={order[i]}
                 data-flip-key={order[i]}
-                className="border-border bg-surface-overlay inline-block rounded-cell border px-1"
+                className="border-border bg-surface-overlay rounded-cell inline-block border px-1"
               >
                 {formatByte(byte, 'hex')}
               </span>

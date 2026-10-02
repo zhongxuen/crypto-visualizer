@@ -23,7 +23,10 @@ import {
  *
  * Writing: debounced, with `history.replaceState`, which the App Router keeps in step
  * with its own state. Replacing rather than pushing means scrubbing through a 300-step
- * run doesn't leave 300 history entries behind.
+ * run doesn't leave 300 history entries behind. While the state equals the module's
+ * defaults the URL stays clean, with no `?s=` (UIUX P9): a link only grows once there is
+ * something in it to share. `link()` writes and returns the link to the current step, for
+ * the "Copy link" button.
  *
  * The codec refuses password-like keys, so a module can't write one by mistake.
  *
@@ -42,6 +45,30 @@ export interface UseShareState<S extends ShareStateBase> {
   linked: S | null;
   /** False when the current state is too large for a link (over 2 KB encoded). */
   shareable: boolean;
+  /**
+   * The link to the current state, also written to the address bar: the bare page while
+   * the state is the defaults. `null` before the URL has been read, or when the state is
+   * too large for a link.
+   */
+  link(): string | null;
+}
+
+/** The page's URL with `?s=` set to `encoded`, or removed for `null`. */
+function urlWith(encoded: string | null): URL {
+  const url = new URL(window.location.href);
+  if (encoded === null) url.searchParams.delete(SHARE_PARAM);
+  else url.searchParams.set(SHARE_PARAM, encoded);
+  return url;
+}
+
+/** What goes in `?s=` for `state`: nothing at the defaults, `undefined` if too large. */
+function linkParam<S extends ShareStateBase>(
+  full: ModuleShareState<S>,
+  state: S,
+): string | null | undefined {
+  const encoded = encodeShareState(full, state);
+  if (encoded === null) return undefined;
+  return encoded === encodeShareState(full, full.defaults) ? null : encoded;
 }
 
 export function useShareState<S extends ShareStateBase>(
@@ -73,11 +100,10 @@ export function useShareState<S extends ShareStateBase>(
   useEffect(() => {
     if (!ready || full === null) return;
     timer.current = setTimeout(() => {
-      const encoded = encodeShareState(full, state);
-      setShareable(encoded !== null);
-      const url = new URL(window.location.href);
-      if (encoded === null) url.searchParams.delete(SHARE_PARAM);
-      else url.searchParams.set(SHARE_PARAM, encoded);
+      const param = linkParam(full, state);
+      setShareable(param !== undefined);
+      // Too large for a link: the page drops `?s=` rather than keep a stale one.
+      const url = urlWith(param ?? null);
       if (url.href !== window.location.href) {
         window.history.replaceState(window.history.state, '', url.href);
       }
@@ -93,5 +119,16 @@ export function useShareState<S extends ShareStateBase>(
     );
   }, []);
 
-  return { state, setState, ready, linked, shareable };
+  const link = useCallback((): string | null => {
+    if (full === null) return null;
+    const param = linkParam(full, state);
+    if (param === undefined) return null;
+    const url = urlWith(param);
+    if (url.href !== window.location.href) {
+      window.history.replaceState(window.history.state, '', url.href);
+    }
+    return url.href;
+  }, [full, state]);
+
+  return { state, setState, ready, linked, shareable, link };
 }

@@ -144,42 +144,46 @@ export function AesModule({ walkthrough }: { walkthrough?: ReactNode }) {
       citations={runs?.AES_PAGE_CITATIONS ?? AES_BLOCK_CITATIONS}
       title={AES_META.title}
       intro={AES_META.intro}
+      slug={AES_META.slug}
+      step={view.index}
+      share={share}
       mode={mode}
       onModeChange={setModeChoice}
+      chapters={
+        <ChapterTabs
+          chapters={AES_CHAPTER_LIST}
+          current={chapter}
+          onSelect={selectChapter}
+          done={
+            progress.completed.includes(AES_META.slug)
+              ? AES_CHAPTER_LIST.map((c) => c.id)
+              : []
+          }
+        />
+      }
+      tools={<HexBinToggle value={format} onChange={setFormat} />}
+      lesson={
+        <ChapterContext.Provider value={chapter}>{walkthrough}</ChapterContext.Provider>
+      }
       controls={
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <ChapterTabs
-              chapters={AES_CHAPTER_LIST}
-              current={chapter}
-              onSelect={selectChapter}
-              done={
-                progress.completed.includes(AES_META.slug)
-                  ? AES_CHAPTER_LIST.map((c) => c.id)
-                  : []
-              }
-            />
-            <HexBinToggle value={format} onChange={setFormat} />
-          </div>
-          {chapter === 'modes' ? (
-            <ModePicker value={cipherMode} onChange={(m) => setInput({ mode: m })} />
-          ) : null}
-          {mode === 'walkthrough' ? (
-            <ChapterContext.Provider value={chapter}>
-              {walkthrough}
-            </ChapterContext.Provider>
-          ) : runs ? (
-            <runs.FreePlayInputs
-              key={String(share.ready)}
-              chapter={chapter}
-              input={state.input}
-              seed={state.seed}
-              onChange={setInput}
-              onSeed={setSeed}
-              shareable={share.shareable}
-            />
-          ) : null}
-        </>
+        chapter === 'modes' || (mode === 'free' && runs) ? (
+          <>
+            {chapter === 'modes' ? (
+              <ModePicker value={cipherMode} onChange={(m) => setInput({ mode: m })} />
+            ) : null}
+            {mode === 'walkthrough' ? null : runs ? (
+              <runs.FreePlayInputs
+                key={String(share.ready)}
+                chapter={chapter}
+                input={state.input}
+                seed={state.seed}
+                onChange={setInput}
+                onSeed={setSeed}
+                shareable={share.shareable}
+              />
+            ) : null}
+          </>
+        ) : null
       }
       inspector={
         <>

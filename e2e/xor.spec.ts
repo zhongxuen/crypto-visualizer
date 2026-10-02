@@ -1,10 +1,10 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
-/** The share link is written only after hydration, so it marks "keys will work". */
+/** The page marks itself once the share state is read (after hydration): keys work then. */
 async function open(page: Page, url = '/xor') {
   await page.goto(url);
-  await expect(page).toHaveURL(/\?s=/);
+  await expect(page.locator('[data-share-ready="true"]')).toHaveCount(1);
 }
 
 /** Wait until the share link carries `step` (it's written after a short debounce). */

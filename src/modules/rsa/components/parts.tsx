@@ -28,8 +28,8 @@ export function Value({
       <p
         data-testid={testId}
         className={cn(
-          'bg-surface rounded-md border px-3 py-2 font-mono text-sm break-all',
-          emphasis ? 'border-accent border-2' : 'border-border',
+          'bg-surface rounded-md px-3 py-2 font-mono text-sm break-all',
+          emphasis ? 'border-accent border-2' : 'border-border border',
         )}
       >
         {value}

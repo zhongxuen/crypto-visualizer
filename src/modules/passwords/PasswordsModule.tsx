@@ -106,47 +106,45 @@ export function PasswordsModule({ walkthrough }: { walkthrough?: ReactNode }) {
       citations={PASSWORDS_PAGE_CITATIONS}
       title={PASSWORDS_META.title}
       intro={PASSWORDS_META.intro}
+      slug={PASSWORDS_META.slug}
+      step={view.index}
+      share={share}
       mode={mode}
       onModeChange={setModeChoice}
+      chapters={
+        <ChapterTabs
+          chapters={PASSWORDS_CHAPTER_LIST}
+          current={chapter}
+          onSelect={selectChapter}
+          done={
+            progress.completed.includes(PASSWORDS_META.slug)
+              ? PASSWORDS_CHAPTER_LIST.map((c) => c.id)
+              : []
+          }
+        />
+      }
+      tools={
+        chapter === 'pbkdf2' ? <HexBinToggle value={format} onChange={setFormat} /> : null
+      }
+      lesson={
+        <ChapterContext.Provider value={chapter}>{walkthrough}</ChapterContext.Provider>
+      }
       controls={
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <ChapterTabs
-              chapters={PASSWORDS_CHAPTER_LIST}
-              current={chapter}
-              onSelect={selectChapter}
-              done={
-                progress.completed.includes(PASSWORDS_META.slug)
-                  ? PASSWORDS_CHAPTER_LIST.map((c) => c.id)
-                  : []
-              }
-            />
-            {chapter === 'pbkdf2' ? (
-              <HexBinToggle value={format} onChange={setFormat} />
-            ) : null}
-          </div>
-          {mode === 'walkthrough' ? (
-            <ChapterContext.Provider value={chapter}>
-              {walkthrough}
-            </ChapterContext.Provider>
-          ) : chapter !== 'cost' ? (
-            runs ? (
-              <runs.FreePlayInputs
-                chapter={chapter}
-                input={state.input}
-                onChange={(patch) =>
-                  setState((current) => ({
-                    ...current,
-                    step: 0,
-                    input: { ...current.input, ...patch },
-                  }))
-                }
-                typed={typed}
-                onTyped={setTyped}
-              />
-            ) : null
-          ) : null}
-        </>
+        mode === 'free' && chapter !== 'cost' && runs ? (
+          <runs.FreePlayInputs
+            chapter={chapter}
+            input={state.input}
+            onChange={(patch) =>
+              setState((current) => ({
+                ...current,
+                step: 0,
+                input: { ...current.input, ...patch },
+              }))
+            }
+            typed={typed}
+            onTyped={setTyped}
+          />
+        ) : null
       }
       inspector={
         hasRun ? (

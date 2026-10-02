@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
@@ -63,8 +63,8 @@ export interface PlaybackActions {
   jumpTo(edge: 'start' | 'end'): void;
   setSpeed(speed: number): void;
   replayPhase(): void;
-  /** Point playback at a different run. Resets to the start. */
-  setTimeline(timeline: PlaybackTimeline): void;
+  /** Point playback at a different run. Resets to the start, unless `keep`. */
+  setTimeline(timeline: PlaybackTimeline, keep?: boolean): void;
   /** Run a command from the keyboard map. The one path shortcuts and buttons share. */
   run(command: PlaybackCommand): void;
 }
@@ -116,9 +116,10 @@ export function createPlaybackStore(
       setSpeed: (value) => apply((state) => setSpeedState(state, value)),
       replayPhase: () => apply(replayPhaseState),
 
-      setTimeline: (next) => {
+      setTimeline: (next, keep = false) => {
         if (next === get().timeline) return;
-        set({ timeline: next, ...createPlayback(get().speed) });
+        if (keep) set({ timeline: next });
+        else set({ timeline: next, ...createPlayback(get().speed) });
       },
 
       run: (command) => {
@@ -178,6 +179,18 @@ export interface UsePlaybackOptions {
   initialStep?: number;
 }
 
+/** The same steps, in the same order, saying the same things: the same run. */
+export function sameSteps(a: SimResult, b: SimResult): boolean {
+  if (a === b) return true;
+  if (a.events.length !== b.events.length || a.durationMs !== b.durationMs) return false;
+  type Step = { at: number; id?: unknown; label?: unknown };
+  return a.events.every((event, i) => {
+    const x = event as Step;
+    const y = b.events[i] as Step;
+    return x.id === y.id && x.at === y.at && x.label === y.label;
+  });
+}
+
 /** Create the playback store for a run and drive it. Call once per view. */
 export function usePlayback({
   result,
@@ -188,10 +201,16 @@ export function usePlayback({
   const timeline = useMemo(() => timelineFrom(result), [result]);
   const [store] = useState(() => createPlaybackStore(timeline, speed));
   const reduced = useReducedMotion();
+  const previous = useRef<SimResult | null>(null);
 
   useEffect(() => {
-    store.getState().setTimeline(timeline);
-    if (initialStep > 0) store.getState().seekStep(initialStep);
+    // A module may rebuild an identical run (its later chapters' code arrived, say). That
+    // is the same run, so the playhead stays where it is: resetting it would drop a share
+    // link's step that had already landed.
+    const same = previous.current !== null && sameSteps(previous.current, result);
+    previous.current = result;
+    store.getState().setTimeline(timeline, same);
+    if (!same && initialStep > 0) store.getState().seekStep(initialStep);
     // `initialStep` is read when the run changes, not tracked afterwards.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store, timeline]);
