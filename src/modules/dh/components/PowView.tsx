@@ -1,4 +1,5 @@
 import { ModClock, NumberTrace } from '@/components/blocks';
+import { Pulse } from '@/components/motion';
 import type { DhPowStepEvent, DhPublicKeyEvent, DhSharedEvent } from '@/core/dh/events';
 import { CLOCK_LIMIT } from '@/core/dh/params';
 import { cn } from '@/lib/cn';
@@ -45,18 +46,26 @@ export function PowStepView({ event }: { event: DhPowStepEvent }) {
           Exponent in binary: bit {event.row + 1} of {event.rows.length}
         </Label>
         <p className="font-mono text-lg tracking-widest" aria-hidden="true">
-          {event.expBits.split('').map((b, i) => (
-            <span
-              key={i}
-              className={cn(
-                'rounded px-0.5',
-                i === event.row && 'bg-diff-on text-diff-on-fg',
-                i > event.row && 'text-fg-muted',
-              )}
-            >
-              {b}
-            </span>
-          ))}
+          {event.expBits.split('').map((b, i) => {
+            const bit = (
+              <span
+                className={cn(
+                  'rounded px-0.5',
+                  i === event.row && 'bg-diff-on text-diff-on-fg',
+                  i > event.row && 'text-fg-muted',
+                )}
+              >
+                {b}
+              </span>
+            );
+            return i === event.row ? (
+              <Pulse key={i} trigger={`${event.id}`}>
+                {bit}
+              </Pulse>
+            ) : (
+              <span key={i}>{bit}</span>
+            );
+          })}
         </p>
         <p className="sr-only">
           The exponent is {event.expBits} in binary; this step reads bit {event.row + 1},
@@ -72,14 +81,21 @@ export function PowStepView({ event }: { event: DhPowStepEvent }) {
           maxHeight="24rem"
           className="min-w-0 flex-1"
         />
-        {hasClock(event.p) ? (
-          <ModClock
-            label="Running value"
-            modulus={BigInt(event.p)}
-            value={BigInt(row.after)}
-            from={BigInt(row.before)}
+        <div className="flex flex-col items-center gap-2">
+          <Value
+            label={row.bit ? 'Square, then × base' : 'Square'}
+            value={`${row.before} → ${row.after}`}
+            changes
           />
-        ) : null}
+          {hasClock(event.p) ? (
+            <ModClock
+              label="Running value"
+              modulus={BigInt(event.p)}
+              value={BigInt(row.after)}
+              from={BigInt(row.before)}
+            />
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -103,6 +119,7 @@ export function PowResultView({ event }: { event: DhPublicKeyEvent | DhSharedEve
           label={label}
           value={event.value}
           emphasis
+          changes
           testId={share ? `dh-share-${event.name}` : `dh-secret-${event.actor}`}
         />
       </div>

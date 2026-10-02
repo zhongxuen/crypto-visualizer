@@ -1,6 +1,15 @@
 import type { DhEvent } from '@/core/dh/events';
 
+import { pourSources, type Board, type LaneId } from '../board';
+
 import { EveFoundView, EveGrowthView, EveSearchView } from './EveView';
+import {
+  PaintEveView,
+  PaintLimitView,
+  PaintMixView,
+  PaintSendView,
+  PaintSharedView,
+} from './PaintLater';
 import { PowResultView, PowStepView } from './PowView';
 import {
   AgreeView,
@@ -16,7 +25,8 @@ import {
 } from './StepView';
 
 /**
- * The picture for one step of the exchange, Eve and MITM scenes. Loaded after hydration
+ * The picture for one step of the exchange, Eve and MITM scenes, and of every paint step
+ * after the first. Loaded after hydration
  * through `../runs` and rendered from the loaded module, not through `next/dynamic`, so
  * nothing suspends while a learner steps. The paint scene's views are in `./PaintViews`.
  */
@@ -24,14 +34,40 @@ export function ScenePicture({
   event,
   events,
   index,
+  board,
   groupName,
 }: {
   event: DhEvent;
   events: readonly DhEvent[];
   index: number;
+  board: Board;
   groupName?: string;
 }) {
   switch (event.kind) {
+    case 'dh.paintMix': {
+      const lane: LaneId = event.actor === 'bob' ? 'bob' : 'alice';
+      return (
+        <PaintMixView
+          event={event}
+          sources={pourSources(board, lane, event.inputs, index)}
+        />
+      );
+    }
+    case 'dh.paintSend':
+      return <PaintSendView event={event} />;
+    case 'dh.paintShared':
+      return <PaintSharedView event={event} />;
+    case 'dh.paintEve': {
+      const shared = events.find((e) => e.kind === 'dh.paintShared');
+      return (
+        <PaintEveView
+          event={event}
+          sharedRecipe={shared?.kind === 'dh.paintShared' ? shared.recipe : undefined}
+        />
+      );
+    }
+    case 'dh.paintLimit':
+      return <PaintLimitView />;
     case 'dh.params':
       return <ParamsView event={event} />;
     case 'dh.private':

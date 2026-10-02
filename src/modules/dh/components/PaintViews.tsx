@@ -1,73 +1,63 @@
-import type { DhPaintEveEvent, DhPaintSharedEvent } from '@/core/dh/events';
+import { Reveal } from '@/components/motion';
+import type { DhPaintPotEvent } from '@/core/dh/events';
 
-import { Swatch, Verdict } from './parts';
+import { Pot } from './Pot';
 
 /*
- * The paint scene's step views, on their own: paint is the first screen, so these are
- * in the route's first load while every other scene's views load after hydration
- * (`./ScenePicture`, through `../runs`).
+ * The paint scene's first view, on its own: the first screen is the common pot, so this
+ * is in the route's first load. The later paint steps' views (`./PaintLater`) load right
+ * after hydration with every other scene's (through `../runs`), which keeps /dh in its
+ * JS budget. Every colour is one core computed (OKLab mixing in `src/core/dh/paint.ts`);
+ * these views only pour, blend and compare them.
  */
 
-const WHO = { alice: 'Alice', bob: 'Bob' } as const;
+export const WHO = {
+  alice: 'Alice',
+  bob: 'Bob',
+  public: 'Everyone',
+  eve: 'Eve',
+  mallory: 'Mallory',
+} as const;
 
-export function PaintSharedView({ event }: { event: DhPaintSharedEvent }) {
+export function Labelled({
+  colour,
+  title,
+  size = 'md',
+  pouring,
+}: {
+  colour: string;
+  title: string;
+  size?: 'md' | 'lg';
+  pouring?: readonly string[];
+}) {
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-6">
-        {(['alice', 'bob'] as const).map((who) => (
-          <p key={who} className="flex items-center gap-2 text-sm">
-            <Swatch colour={event[who]} className="size-12" />
-            <span>
-              {WHO[who]}’s pot <span className="font-mono">{event[who]}</span>
-            </span>
-          </p>
-        ))}
-      </div>
-      <p className="text-fg-secondary text-sm">
-        Recipe: {event.recipe.map((part) => `${part.parts} part ${part.name}`).join(', ')}
-        .
-      </p>
-      <Verdict ok={event.same} testId="dh-paint-same">
-        {event.same ? 'The same colour, bit for bit.' : 'The pots differ.'}
-      </Verdict>
-    </div>
+    <figure className="flex flex-col items-center gap-1 text-center">
+      <Pot colour={colour} size={size} pouring={pouring} />
+      <figcaption className="text-xs">
+        <span className="block font-medium">{title}</span>
+        <span className="font-mono">{colour}</span>
+      </figcaption>
+    </figure>
   );
 }
 
-export function PaintEveView({ event }: { event: DhPaintEveEvent }) {
+/** A new pot of base paint on the table. */
+export function PaintPotView({ event }: { event: DhPaintPotEvent }) {
+  const publicPot = event.role === 'public';
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-6">
-        <p className="flex items-center gap-2 text-sm">
-          <Swatch colour={event.colour} className="size-12" />
-          <span>
-            Eve’s pot <span className="font-mono">{event.colour}</span>
-          </span>
+    <Reveal trigger={event.id}>
+      <span className="flex flex-wrap items-center gap-4">
+        <Labelled
+          colour={event.colour}
+          size="lg"
+          title={publicPot ? 'The common colour' : `${WHO[event.actor]}’s secret colour`}
+        />
+        <p className="max-w-sm text-sm">
+          {publicPot
+            ? 'On the public channel: Alice, Bob and anyone listening can see it.'
+            : `Only ${WHO[event.actor]} has this pot. It never goes on the channel.`}
         </p>
-        <p className="flex items-center gap-2 text-sm">
-          <Swatch colour={event.shared} className="size-12" />
-          <span>
-            The shared pot <span className="font-mono">{event.shared}</span>
-          </span>
-        </p>
-      </div>
-      <p className="text-fg-secondary text-sm">
-        Eve’s recipe:{' '}
-        {event.recipe.map((part) => `${part.parts} ${part.name}`).join(', ')}. OKLab
-        distance from the shared colour: {event.distance.toFixed(3)} (about 0.02 is the
-        smallest difference people notice).
-      </p>
-    </div>
-  );
-}
-
-/** Where the paint analogy stops working. */
-export function PaintLimitView() {
-  return (
-    <p className="border-warn bg-surface rounded-md border-2 p-3 text-sm">
-      Paint mixing is an average, and an average can be undone with a little algebra. The
-      real exchange replaces mixing with gˣ mod p, which nobody knows how to undo quickly
-      for a large p. The next chapter does exactly that.
-    </p>
+      </span>
+    </Reveal>
   );
 }

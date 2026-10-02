@@ -1,6 +1,8 @@
+import { ArrowRight, Scissors } from 'lucide-react';
 import Link from 'next/link';
 
 import { ModClock } from '@/components/blocks';
+import { Pulse } from '@/components/motion';
 import type {
   DhAgreeEvent,
   DhMitmInterceptEvent,
@@ -11,7 +13,9 @@ import type {
   DhRealGroupsEvent,
   DhValidateEvent,
 } from '@/core/dh/events';
+import { cn } from '@/lib/cn';
 
+import { PAIR } from './Lanes';
 import { Label, Value, Verdict } from './parts';
 
 const WHO = { alice: 'Alice', bob: 'Bob', mallory: 'Mallory' } as const;
@@ -73,6 +77,7 @@ export function PrivateView({ event }: { event: DhPrivateEvent }) {
         label={`${WHO[event.actor]}'s private ${event.name}`}
         value={event.value}
         emphasis
+        changes
         testId={`dh-private-${event.name}`}
       />
       <Value label="Allowed range" value={`${event.min} to ${event.max}`} />
@@ -86,7 +91,7 @@ export function ValidateView({ event }: { event: DhValidateEvent }) {
       <div className="grid gap-3 sm:grid-cols-3">
         <Value label={`${event.name}, as received`} value={event.value} />
         <Value label="q" value={event.q} />
-        <Value label={`${event.name}^q mod p`} value={event.check} emphasis />
+        <Value label={`${event.name}^q mod p`} value={event.check} emphasis changes />
       </div>
       <Verdict ok={event.ok}>
         {event.ok
@@ -101,8 +106,8 @@ export function AgreeView({ event }: { event: DhAgreeEvent }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="grid gap-3 sm:grid-cols-2">
-        <Value label="Alice: Bᵃ mod p" value={event.alice} emphasis />
-        <Value label="Bob: Aᵇ mod p" value={event.bob} emphasis />
+        <Value label="Alice: Bᵃ mod p" value={event.alice} emphasis changes />
+        <Value label="Bob: Aᵇ mod p" value={event.bob} emphasis changes />
       </div>
       <Verdict ok={event.same} testId="dh-agree">
         {event.same ? 'The same number on both sides.' : 'The two secrets differ.'}
@@ -145,13 +150,71 @@ export function X25519View() {
 
 export function InterceptView({ event }: { event: DhMitmInterceptEvent }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <Value label={`${WHO[event.from]} sent ${event.name}`} value={event.original} />
-      <Value
-        label={`${WHO[event.to]} receives, as if it were ${event.name}`}
-        value={`${event.replacement} (Mallory's ${event.replacementName})`}
-        emphasis
-      />
+    <div className="flex flex-col gap-3">
+      <ol
+        aria-label={`What happens to ${event.name}`}
+        className="flex flex-wrap items-center gap-2 text-sm"
+      >
+        <li className="border-public rounded-md border px-2 py-1">
+          {WHO[event.from]} sends {event.name} ={' '}
+          <span className="font-mono">{event.original}</span>
+        </li>
+        <li aria-hidden="true">
+          <ArrowRight className="text-fg-muted size-4" />
+        </li>
+        <li className="border-warn flex items-center gap-1 rounded-md border-2 px-2 py-1">
+          <Scissors aria-hidden="true" className="size-3.5" />
+          Mallory keeps it
+        </li>
+        <li aria-hidden="true">
+          <ArrowRight className="text-fg-muted size-4" />
+        </li>
+        <li className="border-warn rounded-md border-2 border-dotted px-2 py-1">
+          {WHO[event.to]} gets {event.replacementName} ={' '}
+          <span className="font-mono">{event.replacement}</span>, labelled “{event.name}”
+        </li>
+      </ol>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Value label={`${WHO[event.from]} sent ${event.name}`} value={event.original} />
+        <Value
+          label={`${WHO[event.to]} receives, as if it were ${event.name}`}
+          value={`${event.replacement} (Mallory's ${event.replacementName})`}
+          emphasis
+          changes
+        />
+      </div>
+    </div>
+  );
+}
+
+/** One secret, framed in its pair's colour and glyph (the lanes use the same pair). */
+function PairValue({
+  pair,
+  label,
+  value,
+  testId,
+}: {
+  pair: keyof typeof PAIR;
+  label: string;
+  value: string;
+  testId?: string;
+}) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <Label>
+        <span aria-hidden="true">{PAIR[pair].glyph} </span>
+        {label}
+        <span className="sr-only"> ({PAIR[pair].words})</span>
+      </Label>
+      <p
+        data-testid={testId}
+        className={cn(
+          'bg-surface rounded-md px-3 py-2 font-mono text-sm break-all',
+          PAIR[pair].border,
+        )}
+      >
+        <Pulse trigger={value}>{value}</Pulse>
+      </p>
     </div>
   );
 }
@@ -160,15 +223,24 @@ export function MitmKeysView({ event }: { event: DhMitmKeysEvent }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Value
+        <PairValue
+          pair="alice"
           label="Alice's secret"
           value={event.alice}
-          emphasis
           testId="dh-mitm-alice"
         />
-        <Value label="Mallory's, with Alice" value={event.malloryWithAlice} />
-        <Value label="Mallory's, with Bob" value={event.malloryWithBob} />
-        <Value label="Bob's secret" value={event.bob} emphasis testId="dh-mitm-bob" />
+        <PairValue
+          pair="alice"
+          label="Mallory's, with Alice"
+          value={event.malloryWithAlice}
+        />
+        <PairValue pair="bob" label="Mallory's, with Bob" value={event.malloryWithBob} />
+        <PairValue
+          pair="bob"
+          label="Bob's secret"
+          value={event.bob}
+          testId="dh-mitm-bob"
+        />
       </div>
       <Verdict ok={event.same}>
         {event.same
@@ -189,6 +261,7 @@ export function MitmMessageView({ event }: { event: DhMitmMessageEvent }) {
         label={encrypt ? 'c = m · s mod p' : 'm = c · s⁻¹ mod p'}
         value={event.output}
         emphasis
+        changes
       />
     </div>
   );

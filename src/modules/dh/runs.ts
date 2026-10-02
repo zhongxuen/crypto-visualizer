@@ -12,6 +12,7 @@ import type { SimResult } from '@/core/sim/result';
 export { getGroup, isGroupId } from '@/core/dh/params';
 export { ScenePicture } from './components/ScenePicture';
 export { FreePlayInputs } from './components/Inputs';
+export { SplitLanes } from './components/SplitLanes';
 
 type Mode = 'walkthrough' | 'free';
 
