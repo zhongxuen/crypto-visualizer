@@ -57,6 +57,34 @@ test.describe('/xor', () => {
     await expect(page.getByRole('status')).toContainText('“hips ”');
   });
 
+  test('the crib chip drags with the mouse and moves with the arrow keys', async ({
+    page,
+  }) => {
+    await open(page);
+    await page.getByRole('button', { name: 'Two-time pad' }).click();
+    await page.locator('body').click({ position: { x: 1, y: 1 } });
+    await page.keyboard.press('Shift+ArrowRight');
+    await page.keyboard.press('Shift+ArrowRight');
+    const crib = page.getByRole('slider', { name: /Crib/ });
+    await expect(crib).toHaveAttribute('aria-valuenow', '0');
+
+    const box = (await crib.boundingBox())!;
+    await page.mouse.move(box.x + 5, box.y + box.height / 2);
+    await page.mouse.down();
+    // Each offset is one 24 px cell: ten cells to the right.
+    for (let x = 1; x <= 10; x += 1) {
+      await page.mouse.move(box.x + 5 + x * 24, box.y + box.height / 2);
+    }
+    await page.mouse.up();
+    await expect(crib).toHaveAttribute('aria-valuenow', '10');
+    await expect(page.getByRole('status')).toContainText('“hips ”');
+
+    await crib.focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect(crib).toHaveAttribute('aria-valuenow', '9');
+    await expect(page.getByRole('status')).toContainText('Offset 9');
+  });
+
   test('a share link lands on the same chapter and step', async ({ page }) => {
     await open(page);
     await page.getByRole('button', { name: 'One-time pad' }).click();
