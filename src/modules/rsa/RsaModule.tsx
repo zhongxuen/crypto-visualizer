@@ -1,12 +1,12 @@
 'use client';
 
 import { ChevronRight } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 
 import { StepInspector } from '@/components/inspector';
 import { ChapterContext, ChapterTabs } from '@/components/lesson';
 import { ModuleLayout, type ModuleMode } from '@/components/shell';
-import { useDeferredImport, useProgress, useShareState } from '@/components/state';
+import { useDeferredImport, useLessonProgress, useShareState } from '@/components/state';
 import {
   BUTTON,
   PhaseStepper,
@@ -115,7 +115,6 @@ export function RsaModule({ walkthrough }: { walkthrough?: ReactNode }) {
   const mode: ModuleMode =
     modeChoice ?? (linked && !isDefaultInput(linked) ? 'free' : 'walkthrough');
   const chapter = state.input.chapter;
-  const { markComplete, progress } = useProgress();
 
   const { seed } = state;
   const { mode: size, p, q, e, msg, text, bits } = state.input;
@@ -146,9 +145,13 @@ export function RsaModule({ walkthrough }: { walkthrough?: ReactNode }) {
   const chapterIndex = RSA_CHAPTER_LIST.findIndex((c) => c.id === chapter);
   const lastChapter = chapterIndex === RSA_CHAPTER_LIST.length - 1;
 
-  useEffect(() => {
-    if (mode === 'walkthrough' && lastChapter && view.atEnd) markComplete(RSA_META.slug);
-  }, [mode, lastChapter, view.atEnd, markComplete]);
+  const doneChapters = useLessonProgress({
+    slug: RSA_META.slug,
+    chapters: RSA_CHAPTER_LIST,
+    chapter: chapter,
+    walkthrough: mode === 'walkthrough',
+    finished: view.atEnd,
+  });
 
   const selectChapter = (id: RsaChapter) =>
     setState((current) => ({
@@ -183,11 +186,7 @@ export function RsaModule({ walkthrough }: { walkthrough?: ReactNode }) {
           chapters={RSA_CHAPTER_LIST}
           current={chapter}
           onSelect={selectChapter}
-          done={
-            progress.completed.includes(RSA_META.slug)
-              ? RSA_CHAPTER_LIST.map((c) => c.id)
-              : []
-          }
+          done={doneChapters}
         />
       }
       lesson={
@@ -263,10 +262,10 @@ export function RsaModule({ walkthrough }: { walkthrough?: ReactNode }) {
           <ChevronRight aria-hidden="true" className="size-4" />
         </button>
       ) : null}
-      {mode === 'walkthrough' && view.atEnd && lastChapter ? (
-        <p className="border-ok rounded-md border px-3 py-2 text-sm">
-          Walkthrough complete. Pick your own primes in Free play.
-        </p>
+      {mode === 'walkthrough' && view.atEnd && lastChapter && runs ? (
+        <runs.CompletionCard slug={RSA_META.slug} learned={runs.LEARNED}>
+          Pick your own primes in Free play.
+        </runs.CompletionCard>
       ) : null}
     </ModuleLayout>
   );

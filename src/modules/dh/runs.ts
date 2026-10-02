@@ -12,6 +12,9 @@ import type { SimResult } from '@/core/sim/result';
 export { getGroup, isGroupId } from '@/core/dh/params';
 export { ScenePicture } from './components/ScenePicture';
 export { FreePlayInputs } from './components/Inputs';
+// The completion card, shown only at the end of the last chapter.
+export { CompletionCard } from '@/components/lesson/CompletionCard';
+export { DH_LEARNED as LEARNED } from './learned';
 export { SplitLanes } from './components/SplitLanes';
 
 type Mode = 'walkthrough' | 'free';

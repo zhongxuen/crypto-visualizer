@@ -42,7 +42,9 @@ test.describe('/hashing', () => {
     await expect(status).toContainText(
       '5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843',
     );
-    await expect(page.getByText('Walkthrough complete.')).toBeVisible();
+    await expect(
+      page.getByRole('region', { name: 'What you can now explain' }),
+    ).toBeVisible();
     const stored = await page.evaluate(() => localStorage.getItem('cv:v1'));
     expect(JSON.parse(stored!).completed).toContain('hashing');
   });

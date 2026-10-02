@@ -1,13 +1,13 @@
 'use client';
 
 import { ChevronRight, SkipForward } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 
 import { HexBinToggle, useByteFormat } from '@/components/blocks';
 import { StepInspector } from '@/components/inspector';
 import { ChapterContext, ChapterTabs } from '@/components/lesson';
 import { ModuleLayout, type ModuleMode } from '@/components/shell';
-import { useDeferredImport, useProgress, useShareState } from '@/components/state';
+import { useDeferredImport, useLessonProgress, useShareState } from '@/components/state';
 import {
   BUTTON,
   PhaseStepper,
@@ -60,7 +60,6 @@ export function HashingModule({ walkthrough }: { walkthrough?: ReactNode }) {
     modeChoice ?? (linked && !isDefaultInput(linked.input) ? 'free' : 'walkthrough');
   const chapter = state.input.chapter;
   const [format, setFormat] = useByteFormat();
-  const { markComplete, progress } = useProgress();
 
   const runs = useDeferredImport(loadRuns);
   const loading = chapter !== 'sha256' && runs === null;
@@ -86,10 +85,13 @@ export function HashingModule({ walkthrough }: { walkthrough?: ReactNode }) {
   const chapterIndex = HASHING_CHAPTER_LIST.findIndex((c) => c.id === chapter);
   const lastChapter = chapterIndex === HASHING_CHAPTER_LIST.length - 1;
 
-  useEffect(() => {
-    if (mode === 'walkthrough' && lastChapter && view.atEnd)
-      markComplete(HASHING_META.slug);
-  }, [mode, lastChapter, view.atEnd, markComplete]);
+  const doneChapters = useLessonProgress({
+    slug: HASHING_META.slug,
+    chapters: HASHING_CHAPTER_LIST,
+    chapter: chapter,
+    walkthrough: mode === 'walkthrough',
+    finished: view.atEnd,
+  });
 
   const selectChapter = (id: HashingChapter) =>
     setState((current) => ({
@@ -125,11 +127,7 @@ export function HashingModule({ walkthrough }: { walkthrough?: ReactNode }) {
           chapters={HASHING_CHAPTER_LIST}
           current={chapter}
           onSelect={selectChapter}
-          done={
-            progress.completed.includes(HASHING_META.slug)
-              ? HASHING_CHAPTER_LIST.map((c) => c.id)
-              : []
-          }
+          done={doneChapters}
         />
       }
       tools={<HexBinToggle value={format} onChange={setFormat} />}
@@ -223,10 +221,10 @@ export function HashingModule({ walkthrough }: { walkthrough?: ReactNode }) {
           <ChevronRight aria-hidden="true" className="size-4" />
         </button>
       ) : null}
-      {mode === 'walkthrough' && view.atEnd && lastChapter ? (
-        <p className="border-ok rounded-md border px-3 py-2 text-sm">
-          Walkthrough complete. Hash your own message in Free play.
-        </p>
+      {mode === 'walkthrough' && view.atEnd && lastChapter && runs ? (
+        <runs.CompletionCard slug={HASHING_META.slug} learned={runs.LEARNED}>
+          Hash your own message in Free play.
+        </runs.CompletionCard>
       ) : null}
     </ModuleLayout>
   );

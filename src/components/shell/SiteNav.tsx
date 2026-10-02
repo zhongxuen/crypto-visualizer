@@ -13,7 +13,8 @@ import { ThemeToggle } from './ThemeToggle';
 
 /**
  * The header's menus (UIUX §4.2 SiteHeader). From `md`: a "Modules" menu (numbered, with
- * a tick for each walkthrough finished), About, and a "Theme" menu. Below `md` all of it
+ * a tick for each walkthrough finished), the learning path, the glossary, About, and a
+ * "Theme" menu. Below `md` all of it
  * moves into one "Menu" sheet, so the header stays one row (B6).
  *
  * Each menu's contents render only while it is open, so the two layouts never put the
@@ -80,7 +81,36 @@ function ModuleLinks({ onNavigate }: { onNavigate: () => void }) {
 }
 
 const LINK =
-  'text-fg-secondary hover:text-fg focus-visible:outline-focus inline-flex min-h-target items-center rounded-md px-2 text-sm focus-visible:outline-2 md:min-h-9';
+  'text-fg-secondary hover:text-fg focus-visible:outline-focus inline-flex min-h-target items-center rounded-md px-2 text-sm focus-visible:outline-2 md:min-h-9 aria-[current=page]:text-fg aria-[current=page]:font-medium';
+
+/** The site's other pages: a short name in the header row, a longer one in the sheet. */
+const PAGES = [
+  { href: '/learn', short: 'Path', long: 'The learning path' },
+  { href: '/glossary', short: 'Glossary', long: 'Glossary' },
+  { href: '/about', short: 'About', long: 'About and accuracy' },
+] as const;
+
+function PageLink({
+  href,
+  onClick,
+  children,
+}: {
+  href: string;
+  onClick?: () => void;
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname();
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      aria-current={pathname === href ? 'page' : undefined}
+      className={LINK}
+    >
+      {children}
+    </Link>
+  );
+}
 
 export function SiteNav() {
   return (
@@ -90,9 +120,11 @@ export function SiteNav() {
         <Disclosure label="Modules" align="start" bare>
           {(close) => <ModuleLinks onNavigate={close} />}
         </Disclosure>
-        <Link href="/about" className={LINK}>
-          About
-        </Link>
+        {PAGES.map((page) => (
+          <PageLink key={page.href} href={page.href}>
+            {page.short}
+          </PageLink>
+        ))}
         <Disclosure label="Theme" icon={Palette} className="ml-auto" bare panel="wide">
           {() => <ThemeToggle />}
         </Disclosure>
@@ -103,9 +135,15 @@ export function SiteNav() {
         {(close) => (
           <div className="flex flex-col gap-3 p-1">
             <ModuleLinks onNavigate={close} />
-            <Link href="/about" onClick={close} className={LINK}>
-              About and accuracy
-            </Link>
+            <ul className="border-border flex flex-col border-t pt-2">
+              {PAGES.map((page) => (
+                <li key={page.href}>
+                  <PageLink href={page.href} onClick={close}>
+                    {page.long}
+                  </PageLink>
+                </li>
+              ))}
+            </ul>
             <ThemeToggle />
           </div>
         )}

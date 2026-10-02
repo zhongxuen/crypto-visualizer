@@ -1,13 +1,13 @@
 'use client';
 
 import { ChevronRight } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 
 import { HexBinToggle, useByteFormat } from '@/components/blocks';
 import { StepInspector } from '@/components/inspector';
 import { ChapterContext, ChapterTabs } from '@/components/lesson';
 import { ModuleLayout, type ModuleMode } from '@/components/shell';
-import { useDeferredImport, useProgress, useShareState } from '@/components/state';
+import { useDeferredImport, useLessonProgress, useShareState } from '@/components/state';
 import {
   BUTTON,
   PhaseStepper,
@@ -50,7 +50,7 @@ function isDefaultInput(input: Input): boolean {
  * runs core's `pbkdf2` in a Web Worker).
  *
  * PRIVACY: the password a learner types lives only in the `typed` state below. It is
- * never passed to `setState` (the share link) or to `useProgress` (localStorage), and
+ * never passed to `setState` (the share link) or to progress storage (localStorage), and
  * the share-state codec refuses password-like keys even if it were.
  * `PasswordsModule.test.tsx` checks both.
  */
@@ -63,7 +63,6 @@ export function PasswordsModule({ walkthrough }: { walkthrough?: ReactNode }) {
   const [typed, setTyped] = useState('');
   const chapter = state.input.chapter;
   const [format, setFormat] = useByteFormat();
-  const { markComplete, progress } = useProgress();
 
   const { exampleId, iterations } = state.input;
   const runs = useDeferredImport(loadRuns);
@@ -90,9 +89,14 @@ export function PasswordsModule({ walkthrough }: { walkthrough?: ReactNode }) {
   const chapterIndex = PASSWORDS_CHAPTER_LIST.findIndex((c) => c.id === chapter);
   const lastChapter = chapterIndex === PASSWORDS_CHAPTER_LIST.length - 1;
 
-  useEffect(() => {
-    if (mode === 'walkthrough' && lastChapter) markComplete(PASSWORDS_META.slug);
-  }, [mode, lastChapter, markComplete]);
+  // The last chapter, the cost calculator, has no run: reaching it finishes the module.
+  const doneChapters = useLessonProgress({
+    slug: PASSWORDS_META.slug,
+    chapters: PASSWORDS_CHAPTER_LIST,
+    chapter: chapter,
+    walkthrough: mode === 'walkthrough',
+    finished: lastChapter || view.atEnd,
+  });
 
   const selectChapter = (id: PasswordsChapter) =>
     setState((current) => ({
@@ -123,11 +127,7 @@ export function PasswordsModule({ walkthrough }: { walkthrough?: ReactNode }) {
           chapters={PASSWORDS_CHAPTER_LIST}
           current={chapter}
           onSelect={selectChapter}
-          done={
-            progress.completed.includes(PASSWORDS_META.slug)
-              ? PASSWORDS_CHAPTER_LIST.map((c) => c.id)
-              : []
-          }
+          done={doneChapters}
         />
       }
       tools={
@@ -184,6 +184,11 @@ export function PasswordsModule({ walkthrough }: { walkthrough?: ReactNode }) {
 
       {chapter === 'cost' && runs ? (
         <runs.CostView input={state.input} onChange={setInput} />
+      ) : null}
+      {chapter === 'cost' && mode === 'walkthrough' && runs ? (
+        <runs.CompletionCard slug={PASSWORDS_META.slug} learned={runs.LEARNED}>
+          Try the sliders, or hash your own password in Free play.
+        </runs.CompletionCard>
       ) : null}
 
       {event && table && (chapter === 'lookup' || chapter === 'salt') ? (

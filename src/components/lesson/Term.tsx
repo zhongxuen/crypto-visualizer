@@ -3,21 +3,29 @@
 import Link from 'next/link';
 import { useId, useRef, useState, type ReactNode } from 'react';
 
-import { GLOSSARY, type GlossaryId } from './glossary';
+import { useDeferredImport } from '../state/useDeferredImport';
+import { GLOSSARY_TERMS, type GlossaryId } from './glossaryTerms';
+
+/** The definitions, loaded after hydration: a walkthrough's first load has only words. */
+const loadGlossary = () => import('./glossary');
 
 /**
  * A word a beginner may not know, with its definition one press away (UIUX §2.1 P3).
  *
  * A toggletip, not a hover tooltip: a real button (dotted underline) that opens a small
- * card with the definition and a link to the module that teaches it. It works by touch
- * and keyboard alike, and closes on Escape or when focus leaves it. The definition sits
- * in an `aria-live` region, so it is read out when it opens.
+ * card with the definition, a link to the module that teaches it and one to the term's
+ * entry on `/glossary`. It works by touch and keyboard alike, and closes on Escape or
+ * when focus leaves it. The definition sits in an `aria-live` region, so it is read out
+ * when it opens. The definitions arrive just after hydration (`glossary.ts` is about
+ * 2 KB of gzipped JS that a module route's first load can't spare), long before anyone
+ * opens one; until then the card says it is loading.
  *
  * Modules wrap the *first* use of a term in their walkthrough: `<Term id="utf-8" />`, or
  * `<Term id="utf-8">UTF-8 bytes</Term>` to keep their own wording.
  */
 export function Term({ id, children }: { id: GlossaryId; children?: ReactNode }) {
-  const entry = GLOSSARY[id];
+  const glossary = useDeferredImport(loadGlossary);
+  const entry = glossary?.GLOSSARY[id];
   const [open, setOpen] = useState(false);
   const popup = useId();
   const root = useRef<HTMLSpanElement>(null);
@@ -43,21 +51,31 @@ export function Term({ id, children }: { id: GlossaryId; children?: ReactNode })
         onClick={() => setOpen((value) => !value)}
         className="decoration-fg-muted focus-visible:outline-focus cursor-help rounded-sm underline decoration-dotted decoration-1 underline-offset-[3px] focus-visible:outline-2"
       >
-        {children ?? entry.term}
+        {children ?? GLOSSARY_TERMS[id]}
       </button>
       <span id={popup} aria-live="polite" className="contents">
         {open ? (
           <span className="border-border bg-surface text-fg absolute top-full left-0 z-30 mt-1 block w-72 max-w-[80vw] rounded-lg border p-3 text-sm leading-relaxed font-normal shadow-md">
-            <strong className="block font-semibold">{entry.term}</strong>
-            <span className="text-fg-secondary block">{entry.definition}</span>
-            {'module' in entry ? (
+            <strong className="block font-semibold">{GLOSSARY_TERMS[id]}</strong>
+            <span className="text-fg-secondary block">
+              {entry ? entry.definition : 'Loading the definition…'}
+            </span>
+            <span className="mt-1 flex flex-wrap gap-x-3">
+              {entry && 'module' in entry ? (
+                <Link
+                  href={entry.module.route}
+                  className="text-accent underline underline-offset-2"
+                >
+                  Learn more in module {entry.module.number}
+                </Link>
+              ) : null}
               <Link
-                href={entry.module.route}
-                className="text-accent mt-1 inline-block underline underline-offset-2"
+                href={`/glossary#${id}`}
+                className="text-accent underline underline-offset-2"
               >
-                Learn more in module {entry.module.number}
+                Glossary
               </Link>
-            ) : null}
+            </span>
           </span>
         ) : null}
       </span>

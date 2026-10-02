@@ -99,7 +99,14 @@ export default function Home() {
           </h2>
           <p className="text-fg-secondary max-w-2xl">
             The modules build on each other, so the path runs in order. Each says what it
-            builds on, if you’d rather jump ahead.
+            builds on, if you’d rather jump ahead. The{' '}
+            <Link
+              href="/learn"
+              className="text-accent focus-visible:outline-focus rounded-sm underline underline-offset-4 focus-visible:outline-2"
+            >
+              learning path
+            </Link>{' '}
+            lists every chapter and picks up where you left off.
           </p>
         </div>
         <ol className="learning-path grid gap-x-6 gap-y-4 md:grid-cols-2 lg:grid-cols-4">

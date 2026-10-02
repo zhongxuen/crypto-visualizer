@@ -200,6 +200,32 @@ body,
   stroke-dasharray: 24;
   animation: cv-draw var(--dur-step) var(--ease-out) both;
 }
+/* The completion card's burst of hex digits (UIUX §7.1): flung out once, then gone.
+   `--dx`, `--dy` and `--spin` are set inline per digit. Never rendered under reduced
+   motion, and the rule below would end it at once anyway. */
+@keyframes cv-confetti {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.6);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), var(--dy)) rotate(var(--spin)) scale(1);
+  }
+}
+.hex-confetti {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-weight: 600;
+  color: var(--tint, var(--accent));
+  opacity: 0;
+  animation: cv-confetti 800ms var(--ease-out) both;
+}
 .motion-wave > * {
   animation: cv-wave var(--dur-quick) var(--ease-out) both;
   animation-delay: calc(var(--i, 0) * var(--wave-stagger, 8ms));

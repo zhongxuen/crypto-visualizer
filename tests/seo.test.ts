@@ -47,9 +47,11 @@ describe('siteUrl', () => {
 describe('sitemap', () => {
   const urls = () => sitemap().map((entry) => new URL(entry.url).pathname);
 
-  it('lists home, about and every ready module', () => {
+  it('lists home, the path, the glossary, about and every ready module', () => {
     const ready = MODULES.filter((m) => m.status === 'ready').map((m) => m.route);
-    expect(urls()).toEqual(expect.arrayContaining(['/', '/about', ...ready]));
+    expect(urls()).toEqual(
+      expect.arrayContaining(['/', '/learn', '/glossary', '/about', ...ready]),
+    );
   });
 
   it('leaves out /demo and planned modules', () => {

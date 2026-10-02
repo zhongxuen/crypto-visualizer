@@ -21,14 +21,21 @@ describe('RFC 7914 §11 test vectors', () => {
     );
   });
 
-  it('P = "Password", S = "NaCl", c = 80000, dkLen = 64 (fast path)', () => {
-    expect(
-      bytesToHex(pbkdf2(utf8Encode('Password'), utf8Encode('NaCl'), 80_000, 64)),
-    ).toBe(
-      '4ddcd8f60b98be21830cee5ef22701f9641a4418d04c0414aeff08876b34ab56' +
-        'a1d425a1225833549adb841b51c9b3176a272bdebba1d078478f62b397f33c8d',
-    );
-  });
+  // 80,000 HMAC iterations in plain TypeScript take 2-3 s alone and can pass vitest's 5 s
+  // default when `npm run verify` runs every suite at once with coverage. The timeout
+  // only bounds a hang; the vector is unchanged.
+  it(
+    'P = "Password", S = "NaCl", c = 80000, dkLen = 64 (fast path)',
+    { timeout: 30_000 },
+    () => {
+      expect(
+        bytesToHex(pbkdf2(utf8Encode('Password'), utf8Encode('NaCl'), 80_000, 64)),
+      ).toBe(
+        '4ddcd8f60b98be21830cee5ef22701f9641a4418d04c0414aeff08876b34ab56' +
+          'a1d425a1225833549adb841b51c9b3176a272bdebba1d078478f62b397f33c8d',
+      );
+    },
+  );
 });
 
 describe('against node:crypto', () => {

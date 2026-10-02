@@ -270,7 +270,10 @@ describe('Term', () => {
     expect(term).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(term);
     expect(term).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByText(/The rule that turns text into bytes/)).toBeInTheDocument();
+    // The definitions load just after hydration.
+    expect(
+      await screen.findByText(/The rule that turns text into bytes/),
+    ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Learn more in module 1' })).toHaveAttribute(
       'href',
       '/xor',

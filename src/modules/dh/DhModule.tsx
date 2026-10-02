@@ -1,12 +1,12 @@
 'use client';
 
 import { ChevronRight, Eye } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 
 import { StepInspector } from '@/components/inspector';
 import { ChapterContext, ChapterTabs } from '@/components/lesson';
 import { ModuleLayout, type ModuleMode } from '@/components/shell';
-import { useDeferredImport, useProgress, useShareState } from '@/components/state';
+import { useDeferredImport, useLessonProgress, useShareState } from '@/components/state';
 import {
   BUTTON,
   PhaseStepper,
@@ -129,7 +129,6 @@ export function DhModule({ walkthrough }: { walkthrough?: ReactNode }) {
   const mode: ModuleMode =
     modeChoice ?? (linked && !isDefaultInput(linked) ? 'free' : 'walkthrough');
   const scene = state.input.scene;
-  const { markComplete, progress } = useProgress();
 
   const { seed } = state;
   const { group, a, b, msg } = state.input;
@@ -160,9 +159,13 @@ export function DhModule({ walkthrough }: { walkthrough?: ReactNode }) {
   const chapterIndex = DH_CHAPTER_LIST.findIndex((c) => c.id === scene);
   const lastChapter = chapterIndex === DH_CHAPTER_LIST.length - 1;
 
-  useEffect(() => {
-    if (mode === 'walkthrough' && lastChapter && view.atEnd) markComplete(DH_META.slug);
-  }, [mode, lastChapter, view.atEnd, markComplete]);
+  const doneChapters = useLessonProgress({
+    slug: DH_META.slug,
+    chapters: DH_CHAPTER_LIST,
+    chapter: scene,
+    walkthrough: mode === 'walkthrough',
+    finished: view.atEnd,
+  });
 
   const selectScene = (id: DhScene) =>
     setState((current) => ({
@@ -210,11 +213,7 @@ export function DhModule({ walkthrough }: { walkthrough?: ReactNode }) {
           chapters={DH_CHAPTER_LIST}
           current={scene}
           onSelect={selectScene}
-          done={
-            progress.completed.includes(DH_META.slug)
-              ? DH_CHAPTER_LIST.map((c) => c.id)
-              : []
-          }
+          done={doneChapters}
         />
       }
       lesson={
@@ -335,10 +334,10 @@ export function DhModule({ walkthrough }: { walkthrough?: ReactNode }) {
           <ChevronRight aria-hidden="true" className="size-4" />
         </button>
       ) : null}
-      {mode === 'walkthrough' && view.atEnd && lastChapter ? (
-        <p className="border-ok rounded-md border px-3 py-2 text-sm">
-          Walkthrough complete. Pick your own p and private keys in Free play.
-        </p>
+      {mode === 'walkthrough' && view.atEnd && lastChapter && runs ? (
+        <runs.CompletionCard slug={DH_META.slug} learned={runs.LEARNED}>
+          Pick your own p and private keys in Free play.
+        </runs.CompletionCard>
       ) : null}
     </ModuleLayout>
   );

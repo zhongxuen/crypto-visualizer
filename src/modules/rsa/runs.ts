@@ -21,6 +21,9 @@ export { RSA_PAGE_CITATIONS } from './citations';
 export { ChapterPicture } from './components/ChapterViews';
 export { MalleabilityStrip } from './components/MalleabilityStrip';
 export { FreePlayInputs } from './components/Inputs';
+// The completion card, shown only at the end of the last chapter.
+export { CompletionCard } from '@/components/lesson/CompletionCard';
+export { RSA_LEARNED as LEARNED } from './learned';
 
 export interface RsaRun {
   result: SimResult<RsaEvent> | null;

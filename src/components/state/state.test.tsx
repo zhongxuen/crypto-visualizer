@@ -10,6 +10,7 @@ import {
 } from '@/core/state';
 
 import { migrateProgress, parseProgress, PROGRESS_KEY } from './progress';
+import { useLessonProgress } from './useLessonProgress';
 import { useProgress } from './useProgress';
 import { useShareState } from './useShareState';
 
@@ -34,6 +35,21 @@ describe('progress migration', () => {
       completed: [],
       prefs: { theme: 'system', bytes: 'hex' },
     });
+  });
+
+  it('keeps a valid resume place and drops a malformed one', () => {
+    const prefs = { theme: 'system', bytes: 'hex' };
+    expect(
+      migrateProgress({ v: 1, completed: [], resume: { slug: 'aes', chapter: 'modes' } })
+        .resume,
+    ).toEqual({ slug: 'aes', chapter: 'modes' });
+    for (const resume of [{ slug: 'aes' }, 'aes/modes', { slug: 1, chapter: 'x' }]) {
+      expect(migrateProgress({ v: 1, completed: [], prefs, resume })).toEqual({
+        v: 1,
+        completed: [],
+        prefs,
+      });
+    }
   });
 
   it('never throws on bad JSON', () => {
@@ -192,5 +208,68 @@ describe('useShareState', () => {
     expect(shareStateFromSearch(DEF, new URL(href!).search).step).toBe(3);
     // Written to the address bar at once, without waiting for the debounce.
     expect(window.location.href).toBe(href);
+  });
+});
+
+describe('useLessonProgress', () => {
+  beforeEach(() => localStorage.clear());
+
+  const CHAPTERS = [{ id: 'one' }, { id: 'two' }] as const;
+  type Id = (typeof CHAPTERS)[number]['id'];
+  const stored = () => JSON.parse(localStorage.getItem(PROGRESS_KEY) ?? 'null');
+
+  function renderLesson(initial: {
+    chapter: Id;
+    walkthrough: boolean;
+    finished: boolean;
+  }) {
+    return renderHook(
+      (props) => useLessonProgress({ slug: 'm', chapters: CHAPTERS, ...props }),
+      {
+        initialProps: initial,
+      },
+    );
+  }
+
+  it('remembers the walkthrough chapter on screen, to resume from', () => {
+    const { rerender } = renderLesson({
+      chapter: 'one',
+      walkthrough: true,
+      finished: false,
+    });
+    expect(stored().resume).toEqual({ slug: 'm', chapter: 'one' });
+    rerender({ chapter: 'two', walkthrough: true, finished: false });
+    expect(stored().resume).toEqual({ slug: 'm', chapter: 'two' });
+    expect(stored().completed).toEqual([]);
+  });
+
+  it('ticks a chapter at its end, and the module at the end of the last one', () => {
+    const { result, rerender } = renderLesson({
+      chapter: 'one',
+      walkthrough: true,
+      finished: false,
+    });
+    expect(result.current).toEqual([]);
+    rerender({ chapter: 'one', walkthrough: true, finished: true });
+    expect(result.current).toEqual(['one']);
+    expect(stored().completed).toEqual(['m/one']);
+    rerender({ chapter: 'two', walkthrough: true, finished: true });
+    expect(stored().completed).toEqual(['m/one', 'm/two', 'm']);
+    expect(result.current).toEqual(['one', 'two']);
+  });
+
+  it('ticks every chapter of a module finished before chapters were tracked', () => {
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify({ v: 1, completed: ['m'] }));
+    const { result } = renderLesson({
+      chapter: 'one',
+      walkthrough: false,
+      finished: false,
+    });
+    expect(result.current).toEqual(['one', 'two']);
+  });
+
+  it('records nothing in free play', () => {
+    renderLesson({ chapter: 'two', walkthrough: false, finished: true });
+    expect(localStorage.getItem(PROGRESS_KEY)).toBeNull();
   });
 });

@@ -40,7 +40,9 @@ test.describe('/xor', () => {
         await page.locator('body').click({ position: { x: 1, y: 1 } });
       }
     }
-    await expect(page.getByText('Walkthrough complete.')).toBeVisible();
+    await expect(
+      page.getByRole('region', { name: 'What you can now explain' }),
+    ).toBeVisible();
     const stored = await page.evaluate(() => localStorage.getItem('cv:v1'));
     expect(JSON.parse(stored!).completed).toContain('xor');
   });

@@ -26,6 +26,9 @@ export { ModeView } from './components/ModeView';
 export { ModePicker } from './components/ModePicker';
 export { PenguinView } from './components/PenguinView';
 export { FreePlayInputs } from './components/Inputs';
+// The completion card, shown only at the end of the last chapter.
+export { CompletionCard } from '@/components/lesson/CompletionCard';
+export { AES_LEARNED as LEARNED } from './learned';
 
 /** Which core run a chapter shows, or `null` when free play's input can't make one. */
 export function aesRunFor(

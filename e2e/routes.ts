@@ -19,6 +19,8 @@ export const MODULE_ROUTES: readonly ModuleRoute[] = MODULES.filter(
 
 export const PAGE_ROUTES: readonly { name: string; path: string }[] = [
   { name: 'home', path: '/' },
+  { name: 'learn', path: '/learn' },
+  { name: 'glossary', path: '/glossary' },
   { name: 'about', path: '/about' },
   // Kept as the building-blocks test bed: noindex, unlinked (CLAUDE.md).
   { name: 'demo', path: '/demo' },

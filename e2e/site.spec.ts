@@ -165,3 +165,79 @@ test.describe('invalid links fall back to the module’s start', () => {
     }
   }
 });
+
+test.describe('the learning path, glossary and 404 (UIUX wave 3)', () => {
+  test('the header links to the path and the glossary', async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto('/');
+    const header = page.getByRole('banner');
+    await header.getByRole('link', { name: 'Path' }).click();
+    await expect(page).toHaveURL(/\/learn$/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      'From one byte to a key exchange',
+    );
+    await header.getByRole('link', { name: 'Glossary' }).click();
+    await expect(page).toHaveURL(/\/glossary$/);
+  });
+
+  test('/learn ticks finished chapters and resumes where the learner left off', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'cv:v1',
+        JSON.stringify({
+          v: 1,
+          completed: ['xor', 'hashing/sha256'],
+          resume: { slug: 'aes', chapter: 'modes' },
+          prefs: { theme: 'system', bytes: 'hex' },
+        }),
+      );
+    });
+    await page.goto('/learn');
+    await expect(page.getByTestId('path-progress')).toContainText('1 of 6 modules');
+
+    const hashing = page.getByRole('navigation', { name: 'Hashing and MACs chapters' });
+    await expect(hashing.getByRole('link', { name: /SHA-256/ })).toContainText('(done)');
+    await expect(hashing.getByRole('link', { name: /Avalanche/ })).not.toContainText(
+      '(done)',
+    );
+
+    await page.getByRole('link', { name: 'Resume module 4: Modes' }).click();
+    await expect(page).toHaveURL(/\/aes\?s=/);
+    await expect(page.locator('[data-share-ready="true"]')).toHaveCount(1);
+    await expect(
+      page
+        .getByRole('navigation', { name: 'Chapters' })
+        .getByRole('button', { name: /Modes/ }),
+    ).toHaveAttribute('aria-current', 'step');
+    // A chapter link opens the walkthrough, not free play.
+    await expect(page.getByRole('button', { name: 'Walkthrough' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  test('a first visit to /learn starts at module 1', async ({ page }) => {
+    await page.goto('/learn');
+    await page.getByRole('link', { name: /Start with Bits, bytes and XOR/ }).click();
+    await expect(page).toHaveURL(/\/xor$/);
+  });
+
+  test('a term in a lesson links to its glossary entry', async ({ page }) => {
+    await page.goto('/glossary#utf-8');
+    const entry = page.locator('[id="utf-8"]');
+    await expect(entry).toContainText('UTF-8');
+    await expect(entry).toBeInViewport();
+    await expect(
+      entry.getByRole('link', { name: /Module 1: Bits, bytes and XOR/ }),
+    ).toHaveAttribute('href', '/xor');
+  });
+
+  test('the 404 page leads back to the path', async ({ page }) => {
+    await page.goto(NOT_FOUND_PATH);
+    await expect(page.getByText('this page ⊕ this page =')).toBeVisible();
+    await page.getByRole('main').getByRole('link', { name: 'The learning path' }).click();
+    await expect(page).toHaveURL(/\/learn$/);
+  });
+});

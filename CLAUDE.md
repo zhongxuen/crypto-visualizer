@@ -107,6 +107,12 @@ Other fixed rules:
   (for the motion primitives in `src/components/motion`) and `share` (the dock's "Copy
   link", and the `data-share-ready` marker e2e waits for). A link at the defaults is the
   bare page: `?s=` appears only once the state differs.
+- Progress goes through `useLessonProgress` (`src/components/state`): it ticks a chapter
+  (`slug/chapter` in `cv:v1`) when its walkthrough ends, the module (`slug`) at the end of
+  the last chapter, and remembers the chapter on screen for `/learn`'s "resume". The end
+  of the last chapter shows `CompletionCard`, which each module re-exports from `runs.ts`
+  with its `learned.ts` bullets so it costs no first-load JS. `/learn` builds its chapter
+  links on the server (`src/app/learn/path.ts`); a new module adds its chapters there.
 - `CitationLink` reads the page's registry from context. Each module passes its own
   (`src/modules/<name>/citations.ts`) to `ModuleLayout`'s `citations` prop;
   `tests/module-citations.test.ts` checks it covers everything the module's runs cite. A

@@ -19,6 +19,9 @@ export { EMPTY_RUN } from './tableRun';
 export { CostView } from './components/CostView';
 export { Pbkdf2Chapter } from './components/Pbkdf2Chapter';
 export { FreePlayInputs } from './components/Inputs';
+// The completion card, shown only at the end of the last chapter.
+export { CompletionCard } from '@/components/lesson/CompletionCard';
+export { PASSWORDS_LEARNED as LEARNED } from './learned';
 
 /** Key length the module derives: one SHA-256 block. */
 export const DK_LEN = 32;

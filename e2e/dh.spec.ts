@@ -125,7 +125,9 @@ test.describe('/dh', () => {
     await axeClean(page, 'mitm, two secrets');
     await page.keyboard.press('End');
     await expect(status).toContainText('The fix: prove who sent each share');
-    await expect(page.getByText('Walkthrough complete.')).toBeVisible();
+    await expect(
+      page.getByRole('region', { name: 'What you can now explain' }),
+    ).toBeVisible();
     await axeClean(page, 'mitm, the fix');
 
     // The lesson ends by pointing at RSA signatures and the TLS 1.3 card.

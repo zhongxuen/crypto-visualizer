@@ -5,8 +5,8 @@
  * stored goes through `migrateProgress`, which accepts every version it knows and falls
  * back to the empty default for anything else. Nothing here throws.
  *
- * Only completion flags and display preferences live here: never an input a learner
- * typed, and never a password (CLAUDE.md: typed free-text passwords are never put in a
+ * Only completion flags, the last chapter opened and display preferences live here:
+ * never an input a learner typed, and never a password (CLAUDE.md: typed free-text passwords are never put in a
  * URL or in localStorage).
  */
 
@@ -20,11 +20,30 @@ export interface ProgressPrefs {
   bytes: BytePref;
 }
 
+/** A place in the walkthroughs: a module and one of its chapters. */
+export interface LessonPlace {
+  /** The module's registry slug, e.g. `'aes'`. */
+  slug: string;
+  /** The chapter id, e.g. `'modes'`. */
+  chapter: string;
+}
+
 export interface ProgressV1 {
   v: 1;
-  /** Walkthrough ids the learner finished, e.g. `'xor'`. Unique, in completion order. */
+  /**
+   * What the learner finished, unique and in completion order: a whole module's
+   * walkthrough as its slug (`'xor'`), one chapter of it as `slug/chapter` (`'xor/otp'`,
+   * `chapterProgressId`).
+   */
   completed: string[];
+  /** The walkthrough chapter opened last, for the learning path's "resume". */
+  resume?: LessonPlace;
   prefs: ProgressPrefs;
+}
+
+/** The `completed` id for one chapter of a module's walkthrough. */
+export function chapterProgressId(slug: string, chapter: string): string {
+  return `${slug}/${chapter}`;
 }
 
 export const DEFAULT_PROGRESS: ProgressV1 = Object.freeze({
@@ -49,7 +68,8 @@ function uniqueStrings(value: unknown): string[] {
 /**
  * Bring any stored value up to the current version.
  *
- * - `v: 1` is read field by field, keeping what's valid and defaulting the rest.
+ * - `v: 1` is read field by field, keeping what's valid and defaulting the rest
+ *   (`resume` came later, and is simply absent from older values).
  * - A bare array (the pre-versioned shape: just the completed ids) becomes `completed`.
  * - Anything else is the default.
  */
@@ -63,6 +83,13 @@ export function migrateProgress(raw: unknown): ProgressV1 {
   if (!isObject(raw) || raw.v !== 1) return result;
 
   result.completed = uniqueStrings(raw.completed);
+  if (
+    isObject(raw.resume) &&
+    typeof raw.resume.slug === 'string' &&
+    typeof raw.resume.chapter === 'string'
+  ) {
+    result.resume = { slug: raw.resume.slug, chapter: raw.resume.chapter };
+  }
   if (isObject(raw.prefs)) {
     const { theme, bytes } = raw.prefs;
     if (theme === 'system' || theme === 'light' || theme === 'dark') {

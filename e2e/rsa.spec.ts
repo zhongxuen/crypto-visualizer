@@ -90,7 +90,9 @@ test.describe('/rsa', () => {
       await page.keyboard.press('End');
       await expect(status).toContainText(last);
     }
-    await expect(page.getByText('Walkthrough complete.')).toBeVisible();
+    await expect(
+      page.getByRole('region', { name: 'What you can now explain' }),
+    ).toBeVisible();
     const stored = await page.evaluate(() => localStorage.getItem('cv:v1'));
     expect(JSON.parse(stored!).completed).toContain('rsa');
   });

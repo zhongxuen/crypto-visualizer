@@ -1,13 +1,13 @@
 'use client';
 
 import { ChevronRight, SkipForward } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 
 import { HexBinToggle, useByteFormat } from '@/components/blocks';
 import { StepInspector } from '@/components/inspector';
 import { ChapterContext, ChapterTabs } from '@/components/lesson';
 import { ModuleLayout, type ModuleMode } from '@/components/shell';
-import { useDeferredImport, useProgress, useShareState } from '@/components/state';
+import { useDeferredImport, useLessonProgress, useShareState } from '@/components/state';
 import {
   BUTTON,
   PhaseStepper,
@@ -60,7 +60,6 @@ export function AesModule({ walkthrough }: { walkthrough?: ReactNode }) {
     modeChoice ?? (linked && !isDefaultInput(linked) ? 'free' : 'walkthrough');
   const chapter = state.input.chapter;
   const [format, setFormat] = useByteFormat();
-  const { markComplete, progress } = useProgress();
 
   const { seed } = state;
   const { mode: cipherMode, keyHex, ptHex, bit } = state.input;
@@ -107,9 +106,13 @@ export function AesModule({ walkthrough }: { walkthrough?: ReactNode }) {
   const chapterIndex = AES_CHAPTER_LIST.findIndex((c) => c.id === chapter);
   const lastChapter = chapterIndex === AES_CHAPTER_LIST.length - 1;
 
-  useEffect(() => {
-    if (mode === 'walkthrough' && lastChapter && view.atEnd) markComplete(AES_META.slug);
-  }, [mode, lastChapter, view.atEnd, markComplete]);
+  const doneChapters = useLessonProgress({
+    slug: AES_META.slug,
+    chapters: AES_CHAPTER_LIST,
+    chapter: chapter,
+    walkthrough: mode === 'walkthrough',
+    finished: view.atEnd,
+  });
 
   const selectChapter = (id: AesChapter) =>
     setState((current) => ({
@@ -156,11 +159,7 @@ export function AesModule({ walkthrough }: { walkthrough?: ReactNode }) {
           chapters={AES_CHAPTER_LIST}
           current={chapter}
           onSelect={selectChapter}
-          done={
-            progress.completed.includes(AES_META.slug)
-              ? AES_CHAPTER_LIST.map((c) => c.id)
-              : []
-          }
+          done={doneChapters}
         />
       }
       tools={<HexBinToggle value={format} onChange={setFormat} />}
@@ -264,10 +263,10 @@ export function AesModule({ walkthrough }: { walkthrough?: ReactNode }) {
           <ChevronRight aria-hidden="true" className="size-4" />
         </button>
       ) : null}
-      {mode === 'walkthrough' && view.atEnd && lastChapter ? (
-        <p className="border-ok rounded-md border px-3 py-2 text-sm">
-          Walkthrough complete. Encrypt your own block in Free play.
-        </p>
+      {mode === 'walkthrough' && view.atEnd && lastChapter && runs ? (
+        <runs.CompletionCard slug={AES_META.slug} learned={runs.LEARNED}>
+          Encrypt your own block in Free play.
+        </runs.CompletionCard>
       ) : null}
     </ModuleLayout>
   );

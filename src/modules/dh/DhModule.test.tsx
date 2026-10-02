@@ -259,4 +259,32 @@ describe('DhModule', { timeout: 20_000 }, () => {
     await expectNoAxeViolations(container);
     // Axe over every chapter is slow on a loaded machine; the checks are unchanged.
   }, 90_000);
+  it('ticks chapters as they finish and ends with the completion card', async () => {
+    await renderLoaded();
+    const tabs = () => screen.getByRole('navigation', { name: 'Chapters' });
+    end();
+    expect(within(tabs()).getByRole('button', { name: /Paint/ })).toHaveTextContent(
+      '(done)',
+    );
+    expect(JSON.parse(localStorage.getItem('cv:v1')!)).toMatchObject({
+      completed: ['dh/paint'],
+      resume: { slug: 'dh', chapter: 'paint' },
+    });
+    expect(screen.queryByTestId('completion-card')).toBeNull();
+
+    chapter('Man in the middle');
+    end();
+    const card = screen.getByTestId('completion-card');
+    expect(card).toHaveTextContent('Module 06 complete');
+    expect(card).toHaveTextContent('Pick your own p and private keys in Free play.');
+    expect(JSON.parse(localStorage.getItem('cv:v1')!).completed).toEqual([
+      'dh/paint',
+      'dh/mitm',
+      'dh',
+    ]);
+    // The whole module is finished, so every chapter is ticked.
+    expect(
+      within(tabs()).getByRole('button', { name: /The exchange/ }),
+    ).toHaveTextContent('(done)');
+  });
 });

@@ -63,9 +63,14 @@ export function readProgress(): ProgressV1 {
   return typeof window === 'undefined' ? DEFAULT_PROGRESS : snapshot();
 }
 
-/** Write a new value and tell every subscriber. Never throws. */
+/**
+ * Write a new value and tell every subscriber. An update that returns the current value
+ * unchanged writes nothing. Never throws.
+ */
 export function writeProgress(update: (current: ProgressV1) => ProgressV1): void {
-  const next = update(snapshot());
+  const current = snapshot();
+  const next = update(current);
+  if (next === current) return;
   const raw = JSON.stringify(next);
   try {
     window.localStorage.setItem(PROGRESS_KEY, raw);

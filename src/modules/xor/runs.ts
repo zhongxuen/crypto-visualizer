@@ -15,6 +15,9 @@ import { bytesRunFor } from './bytesRun';
 // loaded module rather than through `next/dynamic`, so nothing suspends while a learner
 // steps (CLAUDE.md).
 export { FreePlayInputs } from './components/Inputs';
+// The completion card, shown only at the end of the last chapter.
+export { CompletionCard } from '@/components/lesson/CompletionCard';
+export { XOR_LEARNED as LEARNED } from './learned';
 export { XorEventView } from './components/XorEventView';
 
 /**

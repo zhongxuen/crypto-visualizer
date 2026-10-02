@@ -18,6 +18,9 @@ export { AvalancheView } from './components/AvalancheView';
 export { HmacView } from './components/HmacView';
 export { Sha256View } from './components/Sha256View';
 export { FreePlayInputs } from './components/Inputs';
+// The completion card, shown only at the end of the last chapter.
+export { CompletionCard } from '@/components/lesson/CompletionCard';
+export { HASHING_LEARNED as LEARNED } from './learned';
 
 export type HashingEvent = Sha256Event | HmacEvent;
 

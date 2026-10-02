@@ -1,13 +1,13 @@
 'use client';
 
 import { ChevronRight } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 
 import { HexBinToggle, useByteFormat } from '@/components/blocks';
 import { StepInspector } from '@/components/inspector';
 import { ChapterContext, ChapterTabs } from '@/components/lesson';
 import { ModuleLayout, type ModuleMode } from '@/components/shell';
-import { useDeferredImport, useProgress, useShareState } from '@/components/state';
+import { useDeferredImport, useLessonProgress, useShareState } from '@/components/state';
 import {
   BUTTON,
   PhaseStepper,
@@ -52,7 +52,6 @@ export function XorModule({ walkthrough }: { walkthrough?: ReactNode }) {
     modeChoice ?? (linked && !isDefaultInput(linked.input) ? 'free' : 'walkthrough');
   const chapter = state.input.chapter;
   const [format, setFormat] = useByteFormat();
-  const { markComplete, progress } = useProgress();
 
   const runs = useDeferredImport(loadRuns);
   const loading = chapter !== 'bytes' && runs === null;
@@ -78,9 +77,13 @@ export function XorModule({ walkthrough }: { walkthrough?: ReactNode }) {
   const chapterIndex = XOR_CHAPTER_LIST.findIndex((c) => c.id === chapter);
   const lastChapter = chapterIndex === XOR_CHAPTER_LIST.length - 1;
 
-  useEffect(() => {
-    if (mode === 'walkthrough' && lastChapter && view.atEnd) markComplete(XOR_META.slug);
-  }, [mode, lastChapter, view.atEnd, markComplete]);
+  const doneChapters = useLessonProgress({
+    slug: XOR_META.slug,
+    chapters: XOR_CHAPTER_LIST,
+    chapter: chapter,
+    walkthrough: mode === 'walkthrough',
+    finished: view.atEnd,
+  });
 
   const selectChapter = (id: XorChapter) =>
     setState((current) => ({
@@ -114,11 +117,7 @@ export function XorModule({ walkthrough }: { walkthrough?: ReactNode }) {
           chapters={XOR_CHAPTER_LIST}
           current={chapter}
           onSelect={selectChapter}
-          done={
-            progress.completed.includes(XOR_META.slug)
-              ? XOR_CHAPTER_LIST.map((c) => c.id)
-              : []
-          }
+          done={doneChapters}
         />
       }
       tools={<HexBinToggle value={format} onChange={setFormat} />}
@@ -189,10 +188,10 @@ export function XorModule({ walkthrough }: { walkthrough?: ReactNode }) {
           <ChevronRight aria-hidden="true" className="size-4" />
         </button>
       ) : null}
-      {mode === 'walkthrough' && view.atEnd && lastChapter ? (
-        <p className="border-ok rounded-md border px-3 py-2 text-sm">
-          Walkthrough complete. Try your own messages in Free play.
-        </p>
+      {mode === 'walkthrough' && view.atEnd && lastChapter && runs ? (
+        <runs.CompletionCard slug={XOR_META.slug} learned={runs.LEARNED}>
+          Try your own messages in Free play.
+        </runs.CompletionCard>
       ) : null}
     </ModuleLayout>
   );
