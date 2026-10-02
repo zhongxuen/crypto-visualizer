@@ -1,16 +1,23 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 
-import { ByteGrid, NumberTrace, type ByteFormat } from '@/components/blocks';
+import { ByteGrid, formatByte, NumberTrace, type ByteFormat } from '@/components/blocks';
+import { Flip, Pulse, Reveal } from '@/components/motion';
 import { bytesToHex } from '@/core/bytes/hex';
 import { WORKING_NAMES } from '@/core/sha256/constants';
-import type { Sha256Event } from '@/core/sha256/events';
+import type {
+  Sha256BlockEvent,
+  Sha256DigestEvent,
+  Sha256Event,
+  Sha256RoundEvent,
+  Sha256ScheduleEvent,
+} from '@/core/sha256/events';
 import { cn } from '@/lib/cn';
 
 export const hex32 = (word: number) => word.toString(16).padStart(8, '0');
 
-function Label({ children }: { children: React.ReactNode }) {
+function Label({ children }: { children: ReactNode }) {
   return (
     <span className="text-fg-muted text-xs font-medium tracking-wide uppercase">
       {children}
@@ -31,54 +38,297 @@ function Equation({ terms }: { terms: [string, string][] }) {
   );
 }
 
-/** The eight working variables as boxes, before and after one round. */
-function Registers({ before, after }: { before: number[]; after: number[] }) {
+/* ----------------------------------------------------------------------------------
+ * A block read as sixteen 4-byte words.
+ * -------------------------------------------------------------------------------- */
+
+function BlockView({ event, format }: { event: Sha256BlockEvent; format: ByteFormat }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <Label>
+        Block {event.block + 1} of {event.blocks}: every four bytes make one word, W0 to
+        W15
+      </Label>
+      <ol
+        aria-label="The block's sixteen words"
+        className={cn(
+          'grid gap-2',
+          format === 'hex' ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-2',
+        )}
+      >
+        {event.words.map((word, t) => (
+          <li key={t}>
+            <Reveal trigger={event.id} index={t}>
+              <span className="border-border bg-surface rounded-cell flex flex-col gap-0.5 border px-2 py-1">
+                <span className="flex items-baseline justify-between gap-2">
+                  <span className="text-fg-secondary font-mono text-xs">W{t}</span>
+                  <span className="font-mono text-sm tabular-nums">{hex32(word)}</span>
+                </span>
+                <span className="text-fg-muted flex gap-1 font-mono text-[0.65rem] tabular-nums">
+                  {event.bytes.slice(t * 4, t * 4 + 4).map((byte, i) => (
+                    <span key={i}>{formatByte(byte, format)}</span>
+                  ))}
+                </span>
+              </span>
+            </Reveal>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------------------------------
+ * The schedule: four earlier words converge into the new one, which drops into the
+ * 64-word column.
+ * -------------------------------------------------------------------------------- */
+
+const OFFSETS = [2, 7, 15, 16] as const;
+
+const WORD_CELL = {
+  done: 'border-border bg-surface border',
+  input: 'border-accent bg-highlight border-2',
+  new: 'border-diff-on pattern-changed border-2',
+  future: 'border-border text-fg-muted border border-dashed',
+};
+
+function ScheduleView({ event }: { event: Sha256ScheduleEvent }) {
+  const { t } = event;
+  const role = new Map<number, string>(
+    OFFSETS.map((offset) => [t - offset, `t−${offset}`]),
+  );
+  const parts: { name: string; raw: number; mixed?: [string, number] }[] = [
+    { name: `W${t - 2}`, raw: event.inputs[0], mixed: ['σ1', event.s1] },
+    { name: `W${t - 7}`, raw: event.inputs[1] },
+    { name: `W${t - 15}`, raw: event.inputs[2], mixed: ['σ0', event.s0] },
+    { name: `W${t - 16}`, raw: event.inputs[3] },
+  ];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Label>Message schedule: W{t} from four earlier words</Label>
+      <div className="flex flex-col items-center">
+        <ul
+          aria-label={`The four words W${t} is made from`}
+          className="grid w-full max-w-xl grid-cols-2 gap-2 sm:grid-cols-4"
+        >
+          {parts.map((part, i) => (
+            <li key={i}>
+              <Reveal trigger={event.id} index={i}>
+                <span className="border-accent bg-highlight rounded-cell flex flex-col items-center border-2 px-1 py-1 font-mono text-xs tabular-nums">
+                  <span className="text-fg-secondary">{part.name}</span>
+                  <span>{hex32(part.raw)}</span>
+                  <span className="text-fg-secondary">
+                    {part.mixed ? `${part.mixed[0]} → ${hex32(part.mixed[1])}` : 'as is'}
+                  </span>
+                </span>
+              </Reveal>
+            </li>
+          ))}
+        </ul>
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 400 40"
+          preserveAspectRatio="none"
+          className="text-fg-muted hidden h-8 w-full max-w-xl sm:block"
+        >
+          {[50, 150, 250, 350].map((x) => (
+            <line
+              key={x}
+              x1={x}
+              y1={2}
+              x2={200}
+              y2={38}
+              stroke="currentColor"
+              strokeWidth={1.5}
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+        </svg>
+        <span aria-hidden="true" className="text-fg-muted py-1 text-sm sm:hidden">
+          ↓ add all four ↓
+        </span>
+        <Reveal trigger={event.id} index={4}>
+          <Pulse trigger={event.id}>
+            <span className="border-diff-on pattern-changed rounded-cell inline-flex items-baseline gap-2 border-2 px-3 py-1 font-mono text-sm tabular-nums">
+              W{t} = {hex32(event.w)}
+              <span className="text-fg-muted text-xs">(mod 2³²)</span>
+            </span>
+          </Pulse>
+        </Reveal>
+      </div>
+      <ol
+        aria-label="The 64-word schedule"
+        className="grid grid-cols-4 gap-1 sm:grid-cols-8"
+      >
+        {Array.from({ length: 64 }, (_, i) => {
+          const state =
+            i === t ? 'new' : role.has(i) ? 'input' : i < t ? 'done' : 'future';
+          return (
+            <li
+              key={i}
+              data-word={state}
+              className={cn(
+                'rounded-cell flex flex-col px-1 py-0.5 font-mono text-[0.65rem] leading-tight tabular-nums',
+                WORD_CELL[state],
+              )}
+            >
+              <span className="flex justify-between gap-1">
+                <span className={state === 'future' ? undefined : 'text-fg-muted'}>
+                  W{i}
+                </span>
+                {role.has(i) ? (
+                  <span className="font-semibold">{role.get(i)}</span>
+                ) : null}
+              </span>
+              {i <= t ? (
+                hex32(event.W[i])
+              ) : (
+                <span>
+                  <span aria-hidden="true">········</span>
+                  <span className="sr-only">not yet</span>
+                </span>
+              )}
+              {state === 'new' ? <span className="sr-only"> (new)</span> : null}
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------------------------------
+ * One round: a–h, where each value glides one place to the right (<Flip>) and only a
+ * and e are new.
+ * -------------------------------------------------------------------------------- */
+
+/**
+ * A stable key for the value in slot `i` after round `t`: the round that made it, and
+ * whether it entered as an a or an e. After round t, b holds the a made in round t − 1,
+ * c the a made in t − 2, and so on, so the key follows the value as it moves along.
+ */
+export function valueKey(block: number, t: number, i: number): string {
+  return `${block}:${t - (i % 4)}:${i < 4 ? 'a' : 'e'}`;
+}
+
+const SOURCE = ['T1 + T2', '← a', '← b', '← c', 'd + T1', '← e', '← f', '← g'];
+
+function Registers({ event }: { event: Sha256RoundEvent }) {
+  const trigger = `${event.block}:${event.t}`;
   return (
     <div className="flex flex-col gap-2">
-      {[
-        ['before', before],
-        ['after', after],
-      ].map(([name, words]) => (
-        <div key={name as string} className="flex flex-wrap items-center gap-1.5">
-          <span className="text-fg-muted w-12 text-xs">{name as string}</span>
-          {(words as number[]).map((word, i) => {
-            const changed = name === 'after' && (i === 0 || i === 4);
-            return (
+      <Flip trigger={trigger} className="grid grid-cols-4 gap-1.5 sm:grid-cols-8">
+        {event.after.map((word, i) => {
+          const fresh = i === 0 || i === 4;
+          return (
+            <div key={i} className="flex flex-col items-center gap-0.5">
+              <span className="text-fg-secondary font-mono text-xs">
+                {WORKING_NAMES[i]}
+              </span>
               <span
-                key={i}
+                data-flip-key={valueKey(event.block, event.t, i)}
+                data-new={fresh || undefined}
                 className={cn(
-                  'flex flex-col items-center rounded px-1.5 py-0.5 font-mono text-xs',
-                  changed
+                  'rounded-cell w-full px-1 py-1 text-center font-mono text-xs tabular-nums',
+                  fresh
                     ? 'border-diff-on pattern-changed border-2'
                     : 'border-border bg-surface border',
                 )}
               >
-                <span className="text-fg-muted">{WORKING_NAMES[i]}</span>
-                {hex32(word)}
-                {changed ? <span className="sr-only"> (new)</span> : null}
+                {fresh ? <Reveal trigger={trigger}>{hex32(word)}</Reveal> : hex32(word)}
+                {fresh ? <span className="sr-only"> (new)</span> : null}
               </span>
-            );
-          })}
-        </div>
-      ))}
+              <span className="text-fg-muted font-mono text-[0.65rem]">{SOURCE[i]}</span>
+            </div>
+          );
+        })}
+      </Flip>
       <p className="text-fg-muted text-xs">
-        Only a and e are new each round (outlined and hatched); every other letter takes
-        the value of the one before it.
+        Only a and e are new each round (outlined and hatched). Every other letter takes
+        the value of the one before it, so the values move one place to the right, and the
+        old h drops off the end.
       </p>
     </div>
   );
 }
 
-function padCaption(message: number[], padded: number[]) {
-  return (index: number) => {
-    if (index < message.length) {
-      const byte = message[index];
-      return byte >= 0x20 && byte < 0x7f ? String.fromCharCode(byte) : 'msg';
-    }
-    if (index === message.length) return '1 bit';
-    if (index >= padded.length - 8) return 'len';
-    return undefined;
-  };
+function RoundView({ event }: { event: Sha256RoundEvent }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <Label>
+        Block {event.block + 1}, round {event.t + 1} of 64
+      </Label>
+      <Registers event={event} />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-1">
+          <span className="text-sm font-medium">
+            T1 = h + Σ1(e) + Ch(e,f,g) + Kt + Wt
+          </span>
+          <Equation
+            terms={[
+              ['h', hex32(event.before[7])],
+              ['Σ1(e)', hex32(event.S1)],
+              ['Ch(e,f,g)', hex32(event.ch)],
+              [`K${event.t}`, hex32(event.K)],
+              [`W${event.t}`, hex32(event.W)],
+              ['T1', hex32(event.T1)],
+            ]}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-sm font-medium">T2 = Σ0(a) + Maj(a,b,c)</span>
+          <Equation
+            terms={[
+              ['Σ0(a)', hex32(event.S0)],
+              ['Maj(a,b,c)', hex32(event.maj)],
+              ['T2', hex32(event.T2)],
+            ]}
+          />
+          <span className="mt-2 text-sm font-medium">Then</span>
+          <Equation
+            terms={[
+              ['new a = T1 + T2', hex32(event.after[0])],
+              ['new e = d + T1', hex32(event.after[4])],
+            ]}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------------------------------
+ * The digest: H0–H7 slide in side by side, and read together they are the digest.
+ * -------------------------------------------------------------------------------- */
+
+function DigestView({ event, format }: { event: Sha256DigestEvent; format: ByteFormat }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <Label>SHA-256 digest: H0 to H7, side by side</Label>
+      <ol aria-label="H0 to H7" className="grid grid-cols-4 gap-1 sm:grid-cols-8">
+        {event.H.map((h, i) => (
+          <li key={i}>
+            <Reveal trigger={event.id} index={i}>
+              <span className="border-border bg-surface rounded-cell flex flex-col items-center border px-1 py-0.5 font-mono text-xs tabular-nums">
+                <span className="text-fg-muted">H{i}</span>
+                {hex32(h)}
+              </span>
+            </Reveal>
+          </li>
+        ))}
+      </ol>
+      <Reveal trigger={event.id} index={9}>
+        <span
+          data-testid="sha256-digest"
+          className="border-accent bg-surface block rounded-md border-2 px-3 py-2 font-mono text-sm break-all"
+        >
+          {bytesToHex(Uint8Array.from(event.digest))}
+        </span>
+      </Reveal>
+      <ByteGrid label="Digest" bytes={event.digest} format={format} />
+    </div>
+  );
 }
 
 export const Sha256View = memo(function Sha256View({
@@ -89,126 +339,14 @@ export const Sha256View = memo(function Sha256View({
   format: ByteFormat;
 }) {
   switch (event.kind) {
-    case 'sha256.pad': {
-      const lengthStart = event.padded.length - 8;
-      return (
-        <div className="flex flex-col gap-2">
-          <Label>Padded message, {event.padded.length} bytes</Label>
-          <ByteGrid
-            label="Padded message"
-            bytes={event.padded}
-            format={format}
-            columns={format === 'hex' ? 16 : 8}
-            highlight={[
-              event.message.length,
-              ...Array.from({ length: 8 }, (_, i) => lengthStart + i),
-            ]}
-            caption={padCaption(event.message, event.padded)}
-          />
-          <p className="text-fg-muted text-sm">
-            Highlighted: the <code>0x80</code> byte that starts the padding, and the last
-            eight bytes, which hold the message length in bits ({event.bitLength}).
-            Between them, {event.zeros} zero bytes.
-          </p>
-        </div>
-      );
-    }
-
+    case 'sha256.pad':
+      return null;
     case 'sha256.block':
-      return (
-        <div className="flex flex-col gap-3">
-          <Label>
-            Block {event.block + 1} of {event.blocks}
-          </Label>
-          <ByteGrid
-            label={`Block ${event.block + 1}`}
-            bytes={event.bytes}
-            format={format}
-            columns={format === 'hex' ? 16 : 8}
-          />
-          <NumberTrace
-            caption="W0 to W15"
-            columns={[
-              { key: 't', label: 't' },
-              { key: 'w', label: 'Wt', numeric: false },
-            ]}
-            rows={event.words.map((w, t) => ({ t, w: hex32(w) }))}
-            currentRow={15}
-            maxHeight="14rem"
-          />
-        </div>
-      );
-
+      return <BlockView event={event} format={format} />;
     case 'sha256.schedule':
-      return (
-        <div className="flex flex-col gap-3">
-          <Label>Message schedule, W{event.t}</Label>
-          <Equation
-            terms={[
-              [`σ1(W${event.t - 2})`, hex32(event.s1)],
-              [`W${event.t - 7}`, hex32(event.inputs[1])],
-              [`σ0(W${event.t - 15})`, hex32(event.s0)],
-              [`W${event.t - 16}`, hex32(event.inputs[3])],
-              [`= W${event.t} (mod 2³²)`, hex32(event.w)],
-            ]}
-          />
-          <NumberTrace
-            caption="The schedule so far"
-            columns={[
-              { key: 't', label: 't' },
-              { key: 'w', label: 'Wt', numeric: false },
-            ]}
-            rows={event.W.map((w, t) => ({ t, w: hex32(w) }))}
-            currentRow={event.t}
-            maxHeight="16rem"
-          />
-        </div>
-      );
-
+      return <ScheduleView event={event} />;
     case 'sha256.round':
-      return (
-        <div className="flex flex-col gap-4">
-          <Label>
-            Block {event.block + 1}, round {event.t + 1} of 64
-          </Label>
-          <Registers before={event.before} after={event.after} />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium">
-                T1 = h + Σ1(e) + Ch(e,f,g) + Kt + Wt
-              </span>
-              <Equation
-                terms={[
-                  ['h', hex32(event.before[7])],
-                  ['Σ1(e)', hex32(event.S1)],
-                  ['Ch(e,f,g)', hex32(event.ch)],
-                  [`K${event.t}`, hex32(event.K)],
-                  [`W${event.t}`, hex32(event.W)],
-                  ['T1', hex32(event.T1)],
-                ]}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium">T2 = Σ0(a) + Maj(a,b,c)</span>
-              <Equation
-                terms={[
-                  ['Σ0(a)', hex32(event.S0)],
-                  ['Maj(a,b,c)', hex32(event.maj)],
-                  ['T2', hex32(event.T2)],
-                ]}
-              />
-              <span className="mt-2 text-sm font-medium">Then</span>
-              <Equation
-                terms={[
-                  ['new a = T1 + T2', hex32(event.after[0])],
-                  ['new e = d + T1', hex32(event.after[4])],
-                ]}
-              />
-            </div>
-          </div>
-        </div>
-      );
-
+      return <RoundView event={event} />;
     case 'sha256.add':
       return (
         <NumberTrace
@@ -228,18 +366,8 @@ export const Sha256View = memo(function Sha256View({
           currentRow={7}
         />
       );
-
     case 'sha256.digest':
-      return (
-        <div className="flex flex-col gap-3">
-          <Label>SHA-256 digest</Label>
-          <p className="border-accent bg-surface rounded-md border-2 px-3 py-2 font-mono text-sm break-all">
-            {bytesToHex(Uint8Array.from(event.digest))}
-          </p>
-          <ByteGrid label="Digest" bytes={event.digest} format={format} />
-        </div>
-      );
-
+      return <DigestView event={event} format={format} />;
     case 'sha256.avalanche':
       return null;
   }

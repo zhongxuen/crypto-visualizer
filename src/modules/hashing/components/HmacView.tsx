@@ -9,6 +9,8 @@ import type { HmacEvent, HmacHashEvent } from '@/core/hmac/events';
 import { sha256Run } from '@/core/sha256/run';
 import { MAX_STEPPED_BYTES } from '@/core/sha256/sha256';
 
+import { HmacLanes } from './HmacLanes';
+
 const hex = (bytes: readonly number[]) => bytesToHex(Uint8Array.from(bytes));
 
 function Label({ children }: { children: React.ReactNode }) {
@@ -93,13 +95,31 @@ function ExpandHash({ event }: { event: HmacHashEvent }) {
   );
 }
 
+/**
+ * One HMAC step: the two lanes (from the key step on), then the step's own detail.
+ * `events` and `index` are the run's, for the lanes.
+ */
 export const HmacView = memo(function HmacView({
   event,
   format,
+  events,
+  index,
 }: {
   event: HmacEvent;
   format: ByteFormat;
+  events: readonly HmacEvent[];
+  index: number;
 }) {
+  if (event.kind === 'hmac.naive') return <HmacDetail event={event} format={format} />;
+  return (
+    <div className="flex flex-col gap-5">
+      <HmacLanes events={events} index={index} />
+      <HmacDetail event={event} format={format} />
+    </div>
+  );
+});
+
+function HmacDetail({ event, format }: { event: HmacEvent; format: ByteFormat }) {
   switch (event.kind) {
     case 'hmac.naive': {
       const joined = [...event.key, ...event.message, ...event.glue];
@@ -175,4 +195,4 @@ export const HmacView = memo(function HmacView({
         </dl>
       );
   }
-});
+}
