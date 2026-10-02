@@ -1,7 +1,6 @@
 import { encryptBlock } from '@/core/aes/aes128';
 import type { AesEvent } from '@/core/aes/events';
 import { AES_DEFAULT_SEED, AES_EXAMPLES } from '@/core/aes/examples';
-import { MAX_MODE_BYTES } from '@/core/aes/modes/common';
 import type { AesShareState } from '@/core/aes/state';
 import { hexToBytes } from '@/core/bytes/hex';
 import { utf8Encode } from '@/core/bytes/utf8';
@@ -36,8 +35,13 @@ export interface AesInputs {
   mode: AesShareState['input']['mode'];
 }
 
-/** What's wrong with free play's input for this chapter, or `null` if it will run. */
-export function inputProblem(
+/**
+ * What's wrong with free play's key or block for this chapter, or `null`. The message
+ * length limit of the modes chapter is checked in `./inputProblem`, which loads with the
+ * other chapters: its constant lives in the modes' core file, which the first load
+ * doesn't need.
+ */
+export function blockProblem(
   chapter: AesShareState['input']['chapter'],
   input: AesShareState['input'],
 ): string | null {
@@ -45,9 +49,6 @@ export function inputProblem(
   if (input.keyHex?.length !== 32) return 'The key must be 16 bytes (32 hex digits).';
   if (chapter === 'block' || chapter === 'avalanche') {
     if (input.ptHex?.length !== 32) return 'The block must be 16 bytes (32 hex digits).';
-  }
-  if (chapter === 'modes' && (input.ptHex?.length ?? 0) / 2 > MAX_MODE_BYTES) {
-    return `The message can be at most ${MAX_MODE_BYTES} bytes.`;
   }
   return null;
 }
@@ -85,7 +86,7 @@ export function blockRunFor(
   mode: 'walkthrough' | 'free',
   state: AesShareState,
 ): SimResult<AesEvent> | null {
-  if (mode === 'free' && inputProblem('block', state.input)) return null;
+  if (mode === 'free' && blockProblem('block', state.input)) return null;
   const { key, block } = aesInputs('block', mode, state);
   return encryptBlock(key, block, { emit: true }).result;
 }

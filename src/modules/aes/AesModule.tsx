@@ -16,15 +16,14 @@ import {
   useRunView,
 } from '@/components/timeline';
 import type { AesAvalancheEvent, AesEvent, AesModeBlockEvent } from '@/core/aes/events';
-import { AES_MODES, AES_SHARE, type AesChapter } from '@/core/aes/share';
+import { AES_SHARE, type AesChapter } from '@/core/aes/share';
 import { createRun } from '@/core/events/builder';
-import { cn } from '@/lib/cn';
 
 import { BlockView } from './components/BlockView';
-import { MODE_NAMES } from './components/modeNames';
 import { AES_BLOCK_CITATIONS } from './blockCitations';
 import { AES_CHAPTER_LIST, AES_META } from './meta';
-import { aesInputs, blockRunFor, inputProblem } from './blockRun';
+import { aesInputs, blockProblem, blockRunFor } from './blockRun';
+import { AesLessonContext, lessonTags } from './lesson';
 
 type AesState = typeof AES_SHARE.defaults;
 type AesInput = AesState['input'];
@@ -66,6 +65,8 @@ export function AesModule({ walkthrough }: { walkthrough?: ReactNode }) {
   const { seed } = state;
   const { mode: cipherMode, keyHex, ptHex, bit } = state.input;
   const runs = useDeferredImport(loadRuns);
+  // The full check (with the modes' length limit) arrives with the other chapters.
+  const inputProblem = runs?.inputProblem ?? blockProblem;
   const loading = chapter !== 'block' && runs === null;
   const result = useMemo(
     () =>
@@ -126,6 +127,7 @@ export function AesModule({ walkthrough }: { walkthrough?: ReactNode }) {
     setState((current) => ({ ...current, step: 0, seed: next }));
 
   const event = view.event;
+  const tags = useMemo(() => lessonTags(event), [event]);
   const lastIndex = result.events.length - 1;
 
   const avalancheHistory = useMemo(
@@ -163,13 +165,20 @@ export function AesModule({ walkthrough }: { walkthrough?: ReactNode }) {
       }
       tools={<HexBinToggle value={format} onChange={setFormat} />}
       lesson={
-        <ChapterContext.Provider value={chapter}>{walkthrough}</ChapterContext.Provider>
+        <ChapterContext.Provider value={chapter}>
+          <AesLessonContext.Provider value={tags}>
+            {walkthrough}
+          </AesLessonContext.Provider>
+        </ChapterContext.Provider>
       }
       controls={
         chapter === 'modes' || (mode === 'free' && runs) ? (
           <>
-            {chapter === 'modes' ? (
-              <ModePicker value={cipherMode} onChange={(m) => setInput({ mode: m })} />
+            {chapter === 'modes' && runs ? (
+              <runs.ModePicker
+                value={cipherMode}
+                onChange={(m) => setInput({ mode: m })}
+              />
             ) : null}
             {mode === 'walkthrough' ? null : runs ? (
               <runs.FreePlayInputs
@@ -261,34 +270,5 @@ export function AesModule({ walkthrough }: { walkthrough?: ReactNode }) {
         </p>
       ) : null}
     </ModuleLayout>
-  );
-}
-
-function ModePicker({
-  value,
-  onChange,
-}: {
-  value: AesInput['mode'];
-  onChange: (mode: AesInput['mode']) => void;
-}) {
-  return (
-    <div role="group" aria-label="Block cipher mode" className="flex flex-wrap gap-1.5">
-      {AES_MODES.map((m) => (
-        <button
-          key={m}
-          type="button"
-          aria-pressed={m === value}
-          onClick={() => onChange(m)}
-          className={cn(
-            'focus-visible:outline-focus rounded-md border px-3 py-1 text-sm focus-visible:outline-2',
-            m === value
-              ? 'border-accent bg-accent text-accent-fg font-medium'
-              : 'border-border bg-surface text-fg-secondary hover:text-fg',
-          )}
-        >
-          {MODE_NAMES[m]}
-        </button>
-      ))}
-    </div>
   );
 }

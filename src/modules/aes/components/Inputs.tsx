@@ -8,7 +8,7 @@ import type { AesShareState } from '@/core/aes/state';
 import { bytesToHex, hexToBytes } from '@/core/bytes/hex';
 import { utf8Decode, utf8Encode } from '@/core/bytes/utf8';
 
-import { inputProblem } from '../blockRun';
+import { inputProblem } from '../inputProblem';
 
 type AesInput = AesShareState['input'];
 

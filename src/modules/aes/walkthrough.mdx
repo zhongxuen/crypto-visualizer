@@ -1,27 +1,69 @@
-import { Chapter } from '@/components/lesson';
+import { Chapter, Term } from '@/components/lesson';
+import { Phase } from '@/modules/aes/lesson';
 
 <Chapter id="block">
 
 ## One block through AES-128
 
-AES is a **block cipher**: it turns 16 bytes of plaintext into 16 bytes of ciphertext
-under a 16-byte key, and back again with the same key. Those 16 bytes sit in a 4×4 grid
-called the **state**, filled column by column.
+AES is a <Term id="block-cipher" />: it turns 16 <Term id="byte">bytes</Term> of
+plaintext into 16 bytes of ciphertext under a 16-byte key, and back again with the same
+key. The block here is the worked example in FIPS 197 (Appendix C.1).
 
-Encryption is ten **rounds**, each built from four simple steps:
+<Phase on="input">
 
-- **SubBytes** swaps every byte through a fixed table, the S-box. It is the only
-  non-linear step.
-- **ShiftRows** slides row 1 one place left, row 2 two places and row 3 three.
-- **MixColumns** mixes the four bytes of each column so each output byte depends on all
-  four inputs.
-- **AddRoundKey** XORs in a round key made from the key. It is the only step that uses
-  the key.
+**Input.** The 16 bytes sit in a 4×4 grid called the **state**, filled column by column:
+byte 0 at the top left, byte 1 under it.
 
-The last round leaves out MixColumns, and the key goes in once before the first round.
-The block here is the worked example in FIPS 197 (Appendix C.1): step to the end and the
-ciphertext is `69c4e0d86a7b0430d8cdb78070b4c55a`, as printed in the standard.
-Decryption runs the inverse of each step in reverse order; it isn't stepped here.
+</Phase>
+
+<Phase on="round0">
+
+**Round 0.** Before any round, AddRoundKey <Term id="xor">XORs</Term> the key itself
+into the state. Without it, anyone could run the first round's steps themselves.
+
+</Phase>
+
+<Phase on="subBytes">
+
+**SubBytes** swaps every byte through a fixed table, the S-box: a byte's first <Term id="hex" /> digit picks the row, the second the column. It is the only non-linear step.
+
+</Phase>
+
+<Phase on="shiftRows">
+
+**ShiftRows** slides row 1 one place left, row 2 two places and row 3 three. Bytes that
+fall off the left come back on the right, so each column now holds bytes from all four.
+
+</Phase>
+
+<Phase on="mixColumns">
+
+**MixColumns** multiplies each column by a fixed 4×4 matrix, so every output byte
+depends on all four input bytes of its column.
+
+</Phase>
+
+<Phase on="addRoundKey">
+
+**AddRoundKey** XORs in this round's key, made from the key by the key schedule. It is
+the only step that uses the key.
+
+</Phase>
+
+<Phase on="last">
+
+**Round 10**, the last, leaves out MixColumns: there it would add nothing an attacker
+couldn't undo.
+
+</Phase>
+
+<Phase on="output">
+
+**Output.** The state is read out column by column: `69c4e0d86a7b0430d8cdb78070b4c55a`,
+as printed in the standard. Decryption runs the inverse of each step in reverse order;
+it isn't stepped here.
+
+</Phase>
 
 </Chapter>
 
@@ -30,16 +72,29 @@ Decryption runs the inverse of each step in reverse order; it isn't stepped here
 ## The key schedule
 
 AES-128 needs eleven round keys, one per AddRoundKey, from one 16-byte key. The **key
-expansion** stretches the key into 44 four-byte **words**, `w0` to `w43`; each round key
-is four of them.
+expansion** stretches it into 44 four-byte **words**, `w0` to `w43`; each round key is
+four of them. The key is the one in FIPS 197 Appendix A.1, so every word can be checked.
 
-The first four words are the key itself. After that, each word is the word four places
-back XORed with the word just before it. The first word of every round key gets extra
-treatment first: rotate it by one byte (**RotWord**), put each byte through the S-box
-(**SubWord**) and XOR in a round constant (**Rcon**).
+<Phase on="key-copy">
 
-The key here is the one expanded in FIPS 197 Appendix A.1, so every word can be checked
-against the standard.
+**w0 to w3** are the key itself, four bytes each.
+
+</Phase>
+
+<Phase on="key-xor">
+
+**Most words** are the word four places back <Term id="xor">XORed</Term> with the word
+just before.
+
+</Phase>
+
+<Phase on="key-twist">
+
+**The first word of each round key** gets a twist first: rotate the word before it by
+one byte (**RotWord**), put each byte through the S-box (**SubWord**) and XOR in a round
+constant (**Rcon**). Without it, every round key would be a simple function of the key.
+
+</Phase>
 
 </Chapter>
 
@@ -47,13 +102,26 @@ against the standard.
 
 ## The avalanche effect
 
-Flip one bit of the plaintext and follow both blocks through the rounds. AddRoundKey
-XORs the same key into both, so after round 0 they still differ by one bit. Then
-SubBytes spreads the difference across its byte, and ShiftRows and MixColumns spread it
-across the state.
+<Phase on="flip">
 
-By round 2 or 3, about **half of the 128 bits** differ, and it stays near half: the
+**Flip one bit** of the plaintext and follow both blocks through the rounds.
+
+</Phase>
+
+<Phase on="spread">
+
+**Rounds 0 to 2.** AddRoundKey <Term id="xor">XORs</Term> the same key into both, so
+after round 0 they still differ by one bit. Then SubBytes spreads the difference across
+its byte, and ShiftRows and MixColumns across the state.
+
+</Phase>
+
+<Phase on="half">
+
+**From round 3**, about **half of the 128 bits** differ, and it stays near half: the
 ciphertexts of two nearly equal blocks look unrelated.
+
+</Phase>
 
 </Chapter>
 
@@ -61,19 +129,46 @@ ciphertexts of two nearly equal blocks look unrelated.
 
 ## Modes: more than one block
 
-AES only does 16 bytes. A **mode** says how to encrypt a longer message with it.
+AES only does 16 bytes. A **mode** says how to encrypt a longer message with it. Pick
+one above the picture.
 
-- **ECB** encrypts every block on its own. Equal plaintext blocks give equal ciphertext
-  blocks, so the pattern of the message leaks. The message here repeats
-  `ATTACK AT DAWN!!` twice: watch blocks 1 and 2.
-- **CBC** XORs each plaintext block with the previous ciphertext block (the first with a
-  random **IV**) before encrypting, so repeats disappear.
-- **CTR** encrypts a counter and XORs the result into the plaintext, like a one-time pad
-  made by AES. The same counter must never be used twice with one key.
+<Phase on="pad">
 
-ECB and CBC need the last block filled with **PKCS#7 padding**; CTR doesn't. Pick a mode
-above. The IV and nonce here come from a seeded generator so the run repeats exactly;
-a real one comes from a cryptographic random source.
+**Padding.** ECB and CBC need whole blocks, so the last is filled with **PKCS#7
+padding**: n bytes of value n. CTR doesn't need it.
+
+</Phase>
+
+<Phase on="ecb">
+
+**ECB** encrypts every block on its own. Equal plaintext blocks give equal ciphertext
+blocks, so the pattern leaks. The message repeats `ATTACK AT DAWN!!` twice: watch
+blocks 1 and 2.
+
+</Phase>
+
+<Phase on="cbc">
+
+**CBC** <Term id="xor">XORs</Term> each plaintext block with the previous ciphertext
+block (the first with a random <Term id="iv" />) before encrypting, so repeats
+disappear.
+
+</Phase>
+
+<Phase on="ctr">
+
+**CTR** encrypts a counter that ticks up by one per block and XORs the result into the
+plaintext, like a one-time pad made by AES. It starts from a <Term id="nonce" />, and
+must never repeat under one key.
+
+</Phase>
+
+<Phase on="setup">
+
+The IV and nonce here come from a seeded generator so the run repeats exactly; a real
+one comes from a cryptographic random source.
+
+</Phase>
 
 </Chapter>
 
@@ -81,10 +176,25 @@ a real one comes from a cryptographic random source.
 
 ## The ECB penguin
 
-A picture shows the ECB leak at a glance. Here a small penguin, 4 bytes per pixel, is
-encrypted as one long message. With **ECB**, every run of 4 identical pixels becomes the
-same 16 bytes of ciphertext, so the shapes survive and only the colours change. With
-**CBC**, every block depends on the one before it and the picture turns to noise.
+<Phase on="original">
+
+**The picture**: a small penguin, 4 bytes per pixel, encrypted as one long message. Its
+flat colours mean the same 16 bytes over and over.
+
+</Phase>
+
+<Phase on="ecb">
+
+**ECB**: every run of 4 identical pixels becomes the same 16 bytes of ciphertext, so the
+shapes survive and only the colours change.
+
+</Phase>
+
+<Phase on="cbc">
+
+**CBC**: every block depends on the one before it, and the picture turns to noise.
+
+</Phase>
 
 The penguin was drawn for this project; it stands in for the well-known ECB picture of
 Tux.
@@ -95,9 +205,39 @@ Tux.
 
 ## GCM: encryption you can trust
 
+<Phase on="overview">
+
 CBC and CTR hide a message but don't notice if someone changes it on the way. **GCM**
-adds an authentication tag: CTR for secrecy, and a fast polynomial hash, **GHASH**, over
-the ciphertext for integrity. It is the mode TLS 1.3 uses for most connections.
+adds an authentication tag, a kind of <Term id="mac">MAC</Term>. It is the mode TLS 1.3
+uses for most connections.
+
+</Phase>
+
+<Phase on="ctr">
+
+**Secrecy** comes from CTR mode, counting up from the nonce.
+
+</Phase>
+
+<Phase on="ghash">
+
+**Integrity** comes from **GHASH**, a fast polynomial <Term id="hash" /> over the
+ciphertext and its lengths.
+
+</Phase>
+
+<Phase on="tag">
+
+**The tag** is GHASH's output masked with AES of the first counter block.
+
+</Phase>
+
+<Phase on="nonce">
+
+**The nonce rule**: one nonce, one message, per key. A repeat leaks the XOR of two
+plaintexts and lets an attacker forge tags.
+
+</Phase>
 
 This chapter only **describes** GCM; nothing here computes a tag. The TLS 1.3 module in
 phase 2 does it with real values.

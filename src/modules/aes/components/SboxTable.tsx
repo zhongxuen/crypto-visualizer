@@ -1,10 +1,11 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, type CSSProperties } from 'react';
 
 import { SBOX } from '@/core/aes/sbox';
 import { cn } from '@/lib/cn';
 
+import styles from './aes.module.css';
 import { hex2 } from './parts';
 
 const NIBBLES = Array.from({ length: 16 }, (_, i) => i);
@@ -13,15 +14,23 @@ const NIBBLES = Array.from({ length: 16 }, (_, i) => i);
  * The S-box as the 16×16 table FIPS 197 prints (Table 4): row = high nibble of the input,
  * column = low nibble. `SBOX` is computed in core from the field inverse and the affine
  * map, not pasted. `lookup` is the byte being looked up; `used` the other inputs this step.
+ * With `play`, each used entry glows in turn, in the order the state's bytes are looked
+ * up (UIUX §7.2); the end frame is the same with or without it.
  */
 export const SboxTable = memo(function SboxTable({
   lookup,
   used,
+  play = false,
 }: {
   lookup: number;
   used: readonly number[];
+  play?: boolean;
 }) {
-  const usedSet = new Set(used);
+  // Where each input value first appears in the state: its turn in the lookup sweep.
+  const order = new Map<number, number>();
+  used.forEach((value, i) => {
+    if (!order.has(value)) order.set(value, i);
+  });
   const row = lookup >> 4;
   const col = lookup & 0xf;
   return (
@@ -70,12 +79,17 @@ export const SboxTable = memo(function SboxTable({
               {NIBBLES.map((c) => {
                 const input = (r << 4) | c;
                 const isLookup = input === lookup;
-                const isUsed = usedSet.has(input);
+                const turn = order.get(input);
+                const isUsed = turn !== undefined;
                 return (
                   <td
                     key={c}
                     data-lookup={isLookup || undefined}
+                    style={
+                      play && isUsed ? ({ '--i': turn } as CSSProperties) : undefined
+                    }
                     className={cn(
+                      play && isUsed && styles.lookup,
                       'border-border border px-1 text-center',
                       (r === row || c === col) && !isLookup && 'bg-surface-overlay',
                       isUsed && !isLookup && 'text-fg font-semibold underline',
