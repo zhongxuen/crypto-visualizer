@@ -10,11 +10,13 @@ import { HASHING_WALKTHROUGH } from './meta';
 import { sha256RunFor } from './sha256Run';
 
 // For the page, which loads this file after hydration (`useDeferredImport`): the views of
-// the avalanche and HMAC chapters. They render from the loaded module rather than through
+// SHA-256's later steps (its first, the padding, is in the first load), and of the
+// avalanche and HMAC chapters. They render from the loaded module rather than through
 // `next/dynamic`, so nothing suspends while a learner steps.
 export { HASHING_PAGE_CITATIONS } from './citations';
 export { AvalancheView } from './components/AvalancheView';
 export { HmacView } from './components/HmacView';
+export { Sha256View } from './components/Sha256View';
 export { FreePlayInputs } from './components/Inputs';
 
 export type HashingEvent = Sha256Event | HmacEvent;

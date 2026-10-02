@@ -20,8 +20,11 @@ import type { Sha256Event } from '@/core/sha256/events';
 import { createRun } from '@/core/events/builder';
 import { HASHING_SHARE, type HashingChapter } from '@/core/sha256/share';
 
-import { Sha256View } from './components/Sha256View';
+import { PipelineMap } from './components/PipelineMap';
+import { PaddingView } from './components/PaddingView';
+import { LessonContext, lessonKey } from './Lesson';
 import { HASHING_CHAPTER_LIST, HASHING_META } from './meta';
+import { mergeRoundPhases } from './phases';
 import { HASHING_SHA256_CITATIONS } from './sha256Citations';
 import { sha256RunFor } from './sha256Run';
 import type { HashingEvent } from './runs';
@@ -103,6 +106,9 @@ export function HashingModule({ walkthrough }: { walkthrough?: ReactNode }) {
 
   const event = view.event;
   const lastIndex = result.events.length - 1;
+  const seekStep = (step: number) => view.store.getState().seekStep(step);
+  // The rail lists each block's 64 rounds as one entry; the dock still has all phases.
+  const phases = useMemo(() => mergeRoundPhases(result.phases), [result.phases]);
 
   return (
     <ModuleLayout
@@ -128,7 +134,11 @@ export function HashingModule({ walkthrough }: { walkthrough?: ReactNode }) {
       }
       tools={<HexBinToggle value={format} onChange={setFormat} />}
       lesson={
-        <ChapterContext.Provider value={chapter}>{walkthrough}</ChapterContext.Provider>
+        <ChapterContext.Provider value={chapter}>
+          <LessonContext.Provider value={lessonKey(event)}>
+            {walkthrough}
+          </LessonContext.Provider>
+        </ChapterContext.Provider>
       }
       controls={
         mode === 'free' && runs ? (
@@ -150,8 +160,8 @@ export function HashingModule({ walkthrough }: { walkthrough?: ReactNode }) {
             aria-label="Groups of this run"
           >
             <PhaseStepper
-              phases={result.phases}
-              currentIndex={view.phaseIndex}
+              phases={phases.phases}
+              currentIndex={phases.indexOf[view.phaseIndex] ?? -1}
               onSeek={(time) => view.store.getState().seek(time)}
             />
           </div>
@@ -168,28 +178,40 @@ export function HashingModule({ walkthrough }: { walkthrough?: ReactNode }) {
           className="min-w-0 flex-1"
         />
         {chapter === 'sha256' && lastIndex > 0 && view.index < lastIndex ? (
-          <button
-            type="button"
-            className={BUTTON}
-            onClick={() => view.store.getState().seekStep(lastIndex)}
-          >
+          <button type="button" className={BUTTON} onClick={() => seekStep(lastIndex)}>
             <SkipForward aria-hidden="true" className="size-4" />
             Skip to digest
           </button>
         ) : null}
       </div>
+      {chapter === 'sha256' && event ? (
+        <PipelineMap
+          events={result.events as readonly Sha256Event[]}
+          index={view.index}
+          onSeek={seekStep}
+        />
+      ) : null}
       {!event ? (
         <p className="text-fg-muted">
           {loading
             ? 'Loading this chapter…'
             : `Type a message with at least ${Math.floor(state.input.bit / 8) + 1} bytes to flip bit ${state.input.bit}.`}
         </p>
+      ) : event.kind === 'sha256.pad' ? (
+        <PaddingView event={event} format={format} />
+      ) : !runs ? (
+        <p className="text-fg-muted">Loading this step…</p>
       ) : event.kind.startsWith('sha256.') && event.kind !== 'sha256.avalanche' ? (
-        <Sha256View event={event as Sha256Event} format={format} />
-      ) : !runs ? null : event.kind === 'sha256.avalanche' ? (
+        <runs.Sha256View event={event as Sha256Event} format={format} />
+      ) : event.kind === 'sha256.avalanche' ? (
         <runs.AvalancheView event={event} />
       ) : (
-        <runs.HmacView event={event as HmacEvent} format={format} />
+        <runs.HmacView
+          event={event as HmacEvent}
+          format={format}
+          events={result.events as readonly HmacEvent[]}
+          index={view.index}
+        />
       )}
       {mode === 'walkthrough' && view.atEnd && !lastChapter ? (
         <button
